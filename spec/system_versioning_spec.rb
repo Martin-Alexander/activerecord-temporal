@@ -23,7 +23,7 @@ RSpec.describe "system versioning" do
     conn.disable_extension(:btree_gist)
   end
 
-  it "raises an error when loading a contant that isn't an AR model" do
+  it "raises an error when loading a constant that isn't an AR model" do
     model "Author", ApplicationRecord
     stub_const "Num", 1
 
@@ -32,6 +32,36 @@ RSpec.describe "system versioning" do
     expect { Version::File }.to raise_error(NameError, "File is not a descendent of ActiveRecord::Base")
     expect { Version::Kernel }.to raise_error(NameError, "Kernel is not a descendent of ActiveRecord::Base")
     expect { Version::Num }.to raise_error(NameError, "1 is not a descendent of ActiveRecord::Base")
+  end
+
+  it "raises an error when AR model is not system versioned" do
+    model "Pie"
+
+    expect { Version::Pie }.to raise_error(NameError, "Pie is not system versioned")
+  end
+
+  it "finds nested history models" do
+    stub_const("Version", Module.new do
+      include SystemVersioning::Namespace
+
+      namespace "MyApp" do
+        namespace "SystemB"
+      end
+    end)
+
+    model "MyApp::SystemB::User", ApplicationRecord
+
+    expect { Version::MyApp::SystemB::User }.not_to raise_error
+    expect(Version::MyApp::SystemB::User).to be < MyApp::SystemB::User
+    expect(Version::MyApp::SystemB::User).to be < SystemVersioning::SystemVersioned
+  end
+
+  it "finds subclasses" do
+    model "Desert", ApplicationRecord
+    model "CoolWhip", Desert
+
+    expect(Version::Desert).to be < ActiveRecord::Base
+    expect(Version::CoolWhip).to be < Desert
   end
 
   shared_examples "versions records" do

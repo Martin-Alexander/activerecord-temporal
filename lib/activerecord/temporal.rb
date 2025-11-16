@@ -32,18 +32,6 @@ module ActiveRecord::Temporal
   Migration = ActiveRecord::Temporal::SystemVersioning::Migration
 end
 
-unless defined? Temporal
-  module Temporal
-    Querying = ActiveRecord::Temporal::Querying
-    Scoping = ActiveRecord::Temporal::Scoping
-    ScopeRegistry = ActiveRecord::Temporal::ScopeRegistry
-    SystemVersioned = ActiveRecord::Temporal::SystemVersioned
-    SystemVersioning = ActiveRecord::Temporal::SystemVersioning
-    Migration = ActiveRecord::Temporal::Migration
-    ApplicationVersioned = ActiveRecord::Temporal::ApplicationVersioned
-  end
-end
-
 ActiveSupport.on_load(:active_record) do
   require "active_record/connection_adapters/postgresql_adapter" # TODO: add test
 
