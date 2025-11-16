@@ -4,13 +4,9 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
   before do
     conn.enable_extension(:btree_gist)
 
-    stub_const("Version", Module.new do
+    stub_const("History", Module.new do
       include SystemVersioning::HistoryModelNamespace
     end)
-
-    model "ApplicationRecord" do
-      self.abstract_class = true
-    end
   end
 
   after do
@@ -20,18 +16,18 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
   end
 
   it "raises an error when loading a constant that isn't an AR model" do
-    model "Author", ApplicationRecord
+    model "Author"
     stub_const "Num", 1
 
-    expect { Version::Author }.not_to raise_error
-    expect { Version::Foo }.to raise_error(NameError, "uninitialized constant Version::Foo")
-    expect { Version::File }.to raise_error(NameError, "File is not a descendent of ActiveRecord::Base")
-    expect { Version::Kernel }.to raise_error(NameError, "Kernel is not a descendent of ActiveRecord::Base")
-    expect { Version::Num }.to raise_error(NameError, "1 is not a descendent of ActiveRecord::Base")
+    expect { History::Author }.not_to raise_error
+    expect { History::Foo }.to raise_error(NameError, "uninitialized constant History::Foo")
+    expect { History::File }.to raise_error(NameError, "File is not a descendent of ActiveRecord::Base")
+    expect { History::Kernel }.to raise_error(NameError, "Kernel is not a descendent of ActiveRecord::Base")
+    expect { History::Num }.to raise_error(NameError, "1 is not a descendent of ActiveRecord::Base")
   end
 
   it "finds nested history models" do
-    stub_const("Version", Module.new do
+    stub_const("History", Module.new do
       include SystemVersioning::HistoryModelNamespace
 
       namespace "MyApp" do
@@ -39,19 +35,28 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
       end
     end)
 
-    model "MyApp::SystemB::User", ApplicationRecord
+    model "MyApp::SystemB::User"
 
-    expect { Version::MyApp::SystemB::User }.not_to raise_error
-    expect(Version::MyApp::SystemB::User).to be < MyApp::SystemB::User
-    expect(Version::MyApp::SystemB::User).to be < SystemVersioning::HistoryModel
+    expect { History::MyApp::SystemB::User }.not_to raise_error
+    expect(History::MyApp::SystemB::User).to be < MyApp::SystemB::User
+    expect(History::MyApp::SystemB::User).to be < SystemVersioning::HistoryModel
+  end
+
+  it "doesn't interfere with custom history classes" do
+    model "Cake"
+    model "History::Cake" do
+      def self.message = "hi"
+    end
+
+    expect(History::Cake).to respond_to(:message)
   end
 
   it "finds subclasses" do
-    model "Desert", ApplicationRecord
+    model "Desert"
     model "CoolWhip", Desert
 
-    expect(Version::Desert).to be < ActiveRecord::Base
-    expect(Version::CoolWhip).to be < Desert
+    expect(History::Desert).to be < ActiveRecord::Base
+    expect(History::CoolWhip).to be < Desert
   end
 
   shared_examples "versions records" do
@@ -65,15 +70,15 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
         Author.last.update(name: "Egbert")
       end
 
-      expect(Version::Author.count).to eq(4)
+      expect(History::Author.count).to eq(4)
 
-      expect(Version::Author.first)
+      expect(History::Author.first)
         .to have_attributes(name: "Will", system_period: t1...t2)
-      expect(Version::Author.second)
+      expect(History::Author.second)
         .to have_attributes(name: "Bob", system_period: t2...t3)
-      expect(Version::Author.third)
+      expect(History::Author.third)
         .to have_attributes(name: "Sam", system_period: t4...t5)
-      expect(Version::Author.fourth)
+      expect(History::Author.fourth)
         .to have_attributes(name: "Egbert", system_period: t5...)
     end
   end
@@ -84,15 +89,15 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
         t.string :name
       end
 
-      model "Author", ApplicationRecord
+      model "Author"
     end
 
     it "sets table_name to source table" do
-      expect(Version::Author.table_name).to eq("authors")
+      expect(History::Author.table_name).to eq("authors")
     end
 
     it "sets primary_key to source table primary key" do
-      expect(Version::Author.primary_key).to eq("id")
+      expect(History::Author.primary_key).to eq("id")
     end
   end
 
@@ -101,7 +106,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
       system_versioned_table :authors do |t|
         t.string :name
       end
-      model "Author", ApplicationRecord do
+      model "Author" do
         include ActiveRecord::Temporal::SystemVersioned
       end
     end
@@ -109,11 +114,11 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
     include_examples "versions records"
 
     it "sets table_name to history table" do
-      expect(Version::Author.table_name).to eq("authors_history")
+      expect(History::Author.table_name).to eq("authors_history")
     end
 
     it "sets primary_key to source table primary key" do
-      expect(Version::Author.primary_key).to eq(%w[id system_period])
+      expect(History::Author.primary_key).to eq(%w[id system_period])
     end
   end
 
@@ -124,13 +129,13 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
         t.bigserial :author_number, null: false
         t.string :name
       end
-      model "Author", ApplicationRecord do
+      model "Author" do
         include ActiveRecord::Temporal::SystemVersioned
       end
     end
 
     it "sets primary_key to source table primary key" do
-      expect(Version::Author.primary_key).to eq(%w[id author_number system_period])
+      expect(History::Author.primary_key).to eq(%w[id author_number system_period])
     end
 
     include_examples "versions records"

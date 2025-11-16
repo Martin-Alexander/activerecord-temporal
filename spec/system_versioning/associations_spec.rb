@@ -17,20 +17,22 @@ RSpec.describe "system versioning associations" do
 
     history_model_namespace
 
-    model "Library" do
+    history_model_base_class "ApplicationRecord"
+
+    model "Library", ApplicationRecord do
       has_many :books
       has_many :pics, as: :picable
     end
-    system_versioned_model "Author" do
+    system_versioned_model "Author", ApplicationRecord do
       has_many :books
       has_many :libraries, through: :books
       has_many :pics, as: :picable
     end
-    system_versioned_model "Book" do
+    system_versioned_model "Book", ApplicationRecord do
       belongs_to :author
       belongs_to :library
     end
-    system_versioned_model "Pic" do
+    system_versioned_model "Pic", ApplicationRecord do
       belongs_to :picable, polymorphic: true
     end
   end

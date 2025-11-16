@@ -17,12 +17,6 @@ module ActiveRecord::Temporal
             include HistoryModel
           end
 
-          namespace_name = name
-
-          model.define_singleton_method(:history_model) do
-            "#{namespace_name}::#{name}".constantize
-          end
-
           const_set(model_name, history_model)
         end
 

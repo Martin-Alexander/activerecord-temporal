@@ -49,7 +49,13 @@ module History
   include ActiveRecord::Temporal::HistoryModelNamespace
 end
 
-class Employee < ActiveRecord::Base
+class ApplicationRecord < ActiveRecord::Base
+  primary_abstract_class
+
+  include ActiveRecord::Temporal::HistoryModels
+end
+
+class Employee < ApplicationRecord
   include ActiveRecord::Temporal::SystemVersioned
 end
 

@@ -9,7 +9,9 @@ RSpec.describe "sti" do
 
     history_model_namespace
 
-    system_versioned_model "Vehicle"
+    history_model_base_class "ApplicationRecord"
+
+    system_versioned_model "Vehicle", ApplicationRecord
     system_versioned_model "Car", Vehicle
     system_versioned_model "Truck", Vehicle
   end
@@ -53,6 +55,20 @@ RSpec.describe "sti" do
   context "when using a different namespace" do
     before do
       history_model_namespace "Versions"
+
+      model "MyBaseClass" do
+        self.abstract_class = true
+
+        include ActiveRecord::Temporal::HistoryModels
+
+        def self.history_model_namespace
+          Versions
+        end
+      end
+
+      system_versioned_model "Vehicle", MyBaseClass
+      system_versioned_model "Car", Vehicle
+      system_versioned_model "Truck", Vehicle
     end
 
     it "::instantiate returns version class for type" do

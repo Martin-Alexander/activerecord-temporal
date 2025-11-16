@@ -19,6 +19,7 @@ require_relative "temporal/patches/through_association"
 require_relative "temporal/system_versioning/command_recorder"
 require_relative "temporal/system_versioning/history_model_namespace"
 require_relative "temporal/system_versioning/history_model"
+require_relative "temporal/system_versioning/history_models"
 require_relative "temporal/system_versioning/migration"
 require_relative "temporal/system_versioning/schema_creation"
 require_relative "temporal/system_versioning/schema_definitions"
@@ -32,6 +33,7 @@ module ActiveRecord::Temporal
   Migration = ActiveRecord::Temporal::SystemVersioning::Migration
   HistoryModel = ActiveRecord::Temporal::SystemVersioning::HistoryModel
   HistoryModelNamespace = ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace
+  HistoryModels = ActiveRecord::Temporal::SystemVersioning::HistoryModels
 end
 
 ActiveSupport.on_load(:active_record) do

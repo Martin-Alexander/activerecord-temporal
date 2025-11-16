@@ -9,7 +9,9 @@ RSpec.describe "delete triggers" do
 
     history_model_namespace
 
-    system_versioned_model "Book"
+    history_model_base_class "ApplicationRecord"
+
+    system_versioned_model "Book", ApplicationRecord
   end
 
   after do
@@ -59,7 +61,7 @@ RSpec.describe "delete triggers" do
         t.integer :pages
       end
 
-      system_versioned_model "Book" do
+      system_versioned_model "Book", ApplicationRecord do
         self.table_name = "myschema.books"
       end
     end
@@ -74,7 +76,7 @@ RSpec.describe "delete triggers" do
         t.integer :pages
       end
 
-      system_versioned_model "Book" do
+      system_versioned_model "Book", ApplicationRecord do
         self.table_name = "bob's books"
         alias_attribute :title, "book's title"
       end

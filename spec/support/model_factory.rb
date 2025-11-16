@@ -24,5 +24,17 @@ module ActiveRecordTemporalTests
 
       stub_const(name, klass)
     end
+
+    def history_model_base_class(name, &block)
+      klass = Class.new(ActiveRecord::Base) do
+        self.abstract_class = true
+
+        include ActiveRecord::Temporal::HistoryModels
+
+        instance_eval(&block) if block
+      end
+
+      stub_const(name, klass)
+    end
   end
 end
