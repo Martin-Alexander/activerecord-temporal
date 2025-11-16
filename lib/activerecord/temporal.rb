@@ -31,6 +31,7 @@ module ActiveRecord::Temporal
   SystemVersioned = ActiveRecord::Temporal::SystemVersioning::SystemVersioned
   Migration = ActiveRecord::Temporal::SystemVersioning::Migration
   HistoryModel = ActiveRecord::Temporal::SystemVersioning::HistoryModel
+  HistoryModelNamespace = ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace
 end
 
 ActiveSupport.on_load(:active_record) do
