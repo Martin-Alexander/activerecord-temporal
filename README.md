@@ -36,7 +36,7 @@ Read more details [here](#system-versioning).
 
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
-  using ActiveRecord::Temporal::Migration
+  include ActiveRecord::Temporal::Migration
 
   def change
     create_table :employees, system_versioning: true do |t|
@@ -84,17 +84,19 @@ Read more details [here](#application-versioning).
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
   def change
-    using ActiveRecord::Temporal::Migration
+    include ActiveRecord::Temporal::Migration
 
-    create_table :employees, application_versioning: :validity do |t|
+    create_table :employees, primary_key: [:id, :version] do |t|
+      t.bigserial :id, null: false
+      t.bigint :version, null: false, default: 1
       t.integer :salary
+      t.tstzrange :validity, null: false
     end
   end
 end
 
 class Employee < ActiveRecord::Base
   include ActiveRecord::Temporal::ApplicationVersioned
-
   self.time_dimension = :validity
 end
 
@@ -124,25 +126,29 @@ Employee.all
 Read more details [here](#time-travel-queries).
 
 ```ruby
+# Example using system versioning
+
 module History
   include ActiveRecord::Temporal::HistoryModelNamespace
 end
 
-class Product < ActiveRecord::Base
-  include ActiveRecord::Temporal::SystemVersioned
+class ApplicationRecord < ActiveRecord::Base
+  primary_abstract_class
+  include ActiveRecord::Temporal::HistoryModels
+end
 
+class Product < ApplicationRecord
+  include ActiveRecord::Temporal::SystemVersioned
   has_many :lines
 end
 
-class Line < ActiveRecord::Base
+class Line < ApplicationRecord
   include ActiveRecord::Temporal::SystemVersioned
-
   belongs_to :product
 end
 
-class Order < ActiveRecord::Base
+class Order < ApplicationRecord
   include ActiveRecord::Temporal::SystemVersioned
-
   has_many :lines
   has_many :products, through: :lines
 end
@@ -419,7 +425,7 @@ Using `Temporal::SchemaStatements` adds the `system_versioning` option to `creat
 
 ```ruby
 class CreateProducts < ActiveRecord::Base
-  using ActiveRecord::Temporal::Migration
+  include ActiveRecord::Temporal::Migration
 
   def change
     create_table :products, system_versioning: true do |t|
