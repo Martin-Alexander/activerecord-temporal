@@ -15,31 +15,22 @@ RSpec.describe "system versioning associations" do
       t.string :picable_type
     end
 
-    stub_const("Version", Module.new do
-      include SystemVersioning::Namespace
-    end)
+    history_model_namespace
 
-    model "ApplicationRecord" do
-      self.abstract_class = true
-
-      include SystemVersioning
-
-      system_versioning
-    end
-    model "Library", ApplicationRecord do
+    model "Library" do
       has_many :books
       has_many :pics, as: :picable
     end
-    model "Author", ApplicationRecord do
+    system_versioned_model "Author" do
       has_many :books
       has_many :libraries, through: :books
       has_many :pics, as: :picable
     end
-    model "Book", ApplicationRecord do
+    system_versioned_model "Book" do
       belongs_to :author
       belongs_to :library
     end
-    model "Pic", ApplicationRecord do
+    system_versioned_model "Pic" do
       belongs_to :picable, polymorphic: true
     end
   end
@@ -49,15 +40,15 @@ RSpec.describe "system versioning associations" do
     drop_all_versioning_hooks
   end
 
-  shared_examples "has many" do |model_name, association, as = nil|
+  shared_examples "has many" do |model_name, history_model_name, target_history_model_name, association, as = nil|
     poly = as ? ", as: :#{as}" : ""
 
-    it "#{model_name}::Version has_many :#{association}#{poly}" do
+    it "History::#{model_name} has_many :#{association}#{poly}" do
       invers_assoc = as || model_name.underscore
       base_source = model_name.constantize
       base_target = association.to_s.singularize.camelize.constantize
-      version_source = "Version::#{base_source.name}".constantize
-      version_target = "Version::#{base_target.name}".constantize
+      history_source = history_model_name.constantize
+      history_target = target_history_model_name.constantize
 
       source_1 = base_source.create!
       source_2 = base_source.create!
@@ -66,19 +57,19 @@ RSpec.describe "system versioning associations" do
       base_target.create(:id_value => 3, invers_assoc => source_1)
       base_target.create(:id_value => 4, invers_assoc => source_2)
 
-      expect(version_source.first.send(association)).to contain_exactly(
-        be_instance_of(version_target).and(have_attributes(id_value: 2)),
-        be_instance_of(version_target).and(have_attributes(id_value: 3))
+      expect(history_source.first.send(association)).to contain_exactly(
+        be_instance_of(history_target).and(have_attributes(id_value: 2)),
+        be_instance_of(history_target).and(have_attributes(id_value: 3))
       )
     end
   end
 
-  include_examples "has many", "Author", :books
-  include_examples "has many", "Library", :books
-  include_examples "has many", "Author", :pics, :picable
-  include_examples "has many", "Library", :pics, :picable
+  include_examples "has many", "Author", "History::Author", "History::Book", :books
+  include_examples "has many", "Library", "History::Library", "History::Book", :books
+  include_examples "has many", "Author", "History::Author", "History::Pic", :pics, :picable
+  include_examples "has many", "Library", "History::Library", "History::Pic", :pics, :picable
 
-  it "Version::Author has_many :libraries, through: :books" do
+  it "History::Author has_many :libraries, through: :books" do
     author_1 = Author.create!
     author_2 = Author.create!
     library_1 = Library.create!(id_value: 1)
@@ -91,9 +82,60 @@ RSpec.describe "system versioning associations" do
     Book.create(author: author_1, library: library_1)
     Book.create(author: author_1, library: library_2)
 
-    expect(Version::Author.first.libraries).to contain_exactly(
-      be_instance_of(Version::Library).and(have_attributes(id_value: 1)),
-      be_instance_of(Version::Library).and(have_attributes(id_value: 2))
+    expect(History::Author.first.libraries).to contain_exactly(
+      be_instance_of(History::Library).and(have_attributes(id_value: 1)),
+      be_instance_of(History::Library).and(have_attributes(id_value: 2))
     )
+  end
+
+  context "when not using the history model namespace" do
+    before do
+      model "HistoryLibrary", Library do
+        include HistoryModel
+
+        has_many :books, class_name: "HistoryBook", foreign_key: :library_id
+        has_many :pics, as: :picable, class_name: "HistoryPic"
+      end
+      model "HistoryAuthor", Author do
+        include HistoryModel
+
+        has_many :books, class_name: "HistoryBook", foreign_key: :author_id
+        has_many :libraries, through: :books, class_name: "HistoryLibrary"
+        has_many :pics, as: :picable, class_name: "HistoryPic"
+      end
+      model "HistoryBook", Book do
+        include HistoryModel
+
+        belongs_to :author, class_name: "HistoryAuthor", foreign_key: :author_id
+        belongs_to :library, class_name: "HistoryLibrary", foreign_key: :library_id
+      end
+      model "HistoryPic", Pic do
+        include HistoryModel
+      end
+    end
+
+    include_examples "has many", "Author", "HistoryAuthor", "HistoryBook", :books
+    include_examples "has many", "Library", "HistoryLibrary", "HistoryBook", :books
+    include_examples "has many", "Author", "HistoryAuthor", "HistoryPic", :pics, :picable
+    include_examples "has many", "Library", "HistoryLibrary", "HistoryPic", :pics, :picable
+
+    it "HistoryAuthor has_many :libraries, through: :books" do
+      author_1 = Author.create!
+      author_2 = Author.create!
+      library_1 = Library.create!(id_value: 1)
+      library_2 = Library.create!(id_value: 2)
+      library_3 = Library.create!(id_value: 3)
+      Book.create
+      Book.create(library: library_1)
+      Book.create(author: author_2, library: library_3)
+      Book.create(author: author_1)
+      Book.create(author: author_1, library: library_1)
+      Book.create(author: author_1, library: library_2)
+
+      expect(HistoryAuthor.first.libraries).to contain_exactly(
+        be_instance_of(HistoryLibrary).and(have_attributes(id_value: 1)),
+        be_instance_of(HistoryLibrary).and(have_attributes(id_value: 2))
+      )
+    end
   end
 end

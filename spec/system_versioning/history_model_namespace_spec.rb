@@ -1,19 +1,15 @@
 require "spec_helper"
 
-RSpec.describe "system versioning" do
+RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace do
   before do
     conn.enable_extension(:btree_gist)
 
     stub_const("Version", Module.new do
-      include SystemVersioning::Namespace
+      include SystemVersioning::HistoryModelNamespace
     end)
 
     model "ApplicationRecord" do
       self.abstract_class = true
-
-      include SystemVersioning
-
-      system_versioning
     end
   end
 
@@ -34,15 +30,9 @@ RSpec.describe "system versioning" do
     expect { Version::Num }.to raise_error(NameError, "1 is not a descendent of ActiveRecord::Base")
   end
 
-  it "raises an error when AR model is not system versioned" do
-    model "Pie"
-
-    expect { Version::Pie }.to raise_error(NameError, "Pie is not system versioned")
-  end
-
   it "finds nested history models" do
     stub_const("Version", Module.new do
-      include SystemVersioning::Namespace
+      include SystemVersioning::HistoryModelNamespace
 
       namespace "MyApp" do
         namespace "SystemB"
@@ -53,7 +43,7 @@ RSpec.describe "system versioning" do
 
     expect { Version::MyApp::SystemB::User }.not_to raise_error
     expect(Version::MyApp::SystemB::User).to be < MyApp::SystemB::User
-    expect(Version::MyApp::SystemB::User).to be < SystemVersioning::SystemVersioned
+    expect(Version::MyApp::SystemB::User).to be < SystemVersioning::HistoryModel
   end
 
   it "finds subclasses" do
@@ -108,23 +98,12 @@ RSpec.describe "system versioning" do
 
   context "source table primary key is 'id'" do
     before do
-      conn.create_table :authors do |t|
+      system_versioned_table :authors do |t|
         t.string :name
       end
-
-      conn.create_table :authors_history, primary_key: [:id, :system_period] do |t|
-        t.bigint :id, null: false
-        t.string :name
-        t.tstzrange :system_period, null: false
+      model "Author", ApplicationRecord do
+        include ActiveRecord::Temporal::SystemVersioned
       end
-
-      conn.create_versioning_hook(
-        :authors,
-        :authors_history,
-        columns: [:id, :name]
-      )
-
-      model "Author", ApplicationRecord
     end
 
     include_examples "versions records"
@@ -140,27 +119,14 @@ RSpec.describe "system versioning" do
 
   context "source table primary key is (id, author_number)" do
     before do
-      conn.create_table :authors, primary_key: [:id, :author_number] do |t|
+      system_versioned_table :authors, primary_key: [:id, :author_number] do |t|
         t.bigserial :id, null: false
         t.bigserial :author_number, null: false
         t.string :name
       end
-
-      conn.create_table :authors_history, primary_key: [:id, :author_number, :system_period] do |t|
-        t.bigint :id, null: false
-        t.bigint :author_number, null: false
-        t.string :name
-        t.tstzrange :system_period, null: false
+      model "Author", ApplicationRecord do
+        include ActiveRecord::Temporal::SystemVersioned
       end
-
-      conn.create_versioning_hook(
-        :authors,
-        :authors_history,
-        columns: [:id, :name, :author_number],
-        primary_key: [:id, :author_number]
-      )
-
-      model "Author", ApplicationRecord
     end
 
     it "sets primary_key to source table primary key" do

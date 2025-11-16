@@ -7,18 +7,9 @@ RSpec.describe "delete triggers" do
       t.integer :pages
     end
 
-    stub_const("Version", Module.new do
-      include SystemVersioning::Namespace
-    end)
+    history_model_namespace
 
-    model "ApplicationRecord" do
-      self.abstract_class = true
-
-      include SystemVersioning
-
-      system_versioning
-    end
-    model "Book", ApplicationRecord
+    system_versioned_model "Book"
   end
 
   after do
@@ -37,8 +28,8 @@ RSpec.describe "delete triggers" do
         Book.first.destroy!
       end
 
-      expect(Version::Book.count).to eq(1)
-      expect(Version::Book.first).to have_attributes(
+      expect(History::Book.count).to eq(1)
+      expect(History::Book.first).to have_attributes(
         title: "The Great Gatsby",
         pages: 180,
         system_period: insert_time...delete_time
@@ -52,7 +43,7 @@ RSpec.describe "delete triggers" do
           Book.first.destroy!
         end
 
-        expect(Version::Book.count).to eq(0)
+        expect(History::Book.count).to eq(0)
       end
     end
   end
@@ -68,7 +59,7 @@ RSpec.describe "delete triggers" do
         t.integer :pages
       end
 
-      model "Book", ApplicationRecord do
+      system_versioned_model "Book" do
         self.table_name = "myschema.books"
       end
     end
@@ -83,7 +74,7 @@ RSpec.describe "delete triggers" do
         t.integer :pages
       end
 
-      model "Book", ApplicationRecord do
+      system_versioned_model "Book" do
         self.table_name = "bob's books"
         alias_attribute :title, "book's title"
       end

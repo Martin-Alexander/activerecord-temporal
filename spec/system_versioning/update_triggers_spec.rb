@@ -2,34 +2,14 @@ require "spec_helper"
 
 RSpec.describe "update triggers" do
   before do
-    conn.enable_extension(:btree_gist)
-
-    conn.create_table :books do |t|
+    system_versioned_table :books do |t|
       t.string :title
       t.integer :pages
     end
 
-    conn.create_table :books_history, primary_key: [:id, :system_period] do |t|
-      t.bigint :id, null: false
-      t.string :title
-      t.integer :pages
-      t.tstzrange :system_period, null: false
-    end
+    history_model_namespace
 
-    conn.create_versioning_hook(:books, :books_history, columns: [:id, :title, :pages])
-
-    stub_const("Version", Module.new do
-      include SystemVersioning::Namespace
-    end)
-
-    model "ApplicationRecord" do
-      self.abstract_class = true
-
-      include SystemVersioning
-
-      system_versioning
-    end
-    model "Book", ApplicationRecord
+    system_versioned_model "Book"
   end
 
   after do
@@ -48,10 +28,10 @@ RSpec.describe "update triggers" do
         Book.first.update!(title: "The Greatest Gatsby")
       end
 
-      expect(Version::Book.count).to eq(2)
-      expect(Version::Book.find_by(title: "The Great Gatsby"))
+      expect(History::Book.count).to eq(2)
+      expect(History::Book.find_by(title: "The Great Gatsby"))
         .to have_attributes(pages: 180, system_period: insert_time...update_time)
-      expect(Version::Book.find_by(title: "The Greatest Gatsby"))
+      expect(History::Book.find_by(title: "The Greatest Gatsby"))
         .to have_attributes(pages: 180, system_period: update_time...)
     end
 
@@ -63,8 +43,8 @@ RSpec.describe "update triggers" do
 
         Book.first.update!(title: "The Great Gatsby")
 
-        expect(Version::Book.count).to eq(1)
-        expect(Version::Book.first).to have_attributes(
+        expect(History::Book.count).to eq(1)
+        expect(History::Book.first).to have_attributes(
           title: "The Great Gatsby",
           pages: 180,
           system_period: insert_time...
@@ -84,14 +64,14 @@ RSpec.describe "update triggers" do
           Book.first.update!(title: "The Absolutely Greatest Gatsby")
         end
 
-        expect(Version::Book.count).to eq(2)
-        expect(Version::Book.find_by(title: "The Great Gatsby"))
+        expect(History::Book.count).to eq(2)
+        expect(History::Book.find_by(title: "The Great Gatsby"))
           .to have_attributes(
             title: "The Great Gatsby",
             pages: 180,
             system_period: insert_time...update_time
           )
-        expect(Version::Book.find_by(title: "The Absolutely Greatest Gatsby"))
+        expect(History::Book.find_by(title: "The Absolutely Greatest Gatsby"))
           .to have_attributes(
             title: "The Absolutely Greatest Gatsby",
             pages: 180,
@@ -112,7 +92,7 @@ RSpec.describe "update triggers" do
         t.integer :pages
       end
 
-      model "Book", ApplicationRecord do
+      system_versioned_model "Book" do
         self.table_name = "myschema.books"
       end
     end
@@ -127,7 +107,7 @@ RSpec.describe "update triggers" do
         t.integer :pages
       end
 
-      model "Book", ApplicationRecord do
+      system_versioned_model "Book" do
         self.table_name = "bob's books"
         alias_attribute :title, "book's title"
       end

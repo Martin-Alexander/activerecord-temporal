@@ -11,6 +11,7 @@ require "support/db_config"
 require "support/have_column"
 require "support/have_versioning_hook"
 require "support/model_factory"
+require "support/namespace_factory"
 require "support/record_factory"
 require "support/test_connection_adapter"
 require "support/table_factory"
@@ -26,6 +27,7 @@ RSpec.configure do |config|
   config.include ActiveSupport::Testing::TimeHelpers
   config.include Associations
   config.include ModelFactory
+  config.include NamespaceFactory
   config.include RecordFactory
   config.include TableFactory
   config.include TransactionTime

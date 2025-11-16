@@ -1,11 +1,11 @@
 module ActiveRecord::Temporal
   module SystemVersioning
-    module Namespace
+    module HistoryModelNamespace
       extend ActiveSupport::Concern
 
       class_methods do
-        def const_missing(name)
-          model = join(@root, name).constantize
+        def const_missing(model_name)
+          model = join(@root, model_name).constantize
         rescue NameError
           super
         else
@@ -13,20 +13,22 @@ module ActiveRecord::Temporal
             raise NameError, "#{model} is not a descendent of ActiveRecord::Base"
           end
 
-          unless model < SystemVersioning
-            raise NameError, "#{model} is not system versioned"
+          history_model = Class.new(model) do
+            include HistoryModel
           end
 
-          version_model = Class.new(model) do
-            include SystemVersioned
+          namespace_name = name
+
+          model.define_singleton_method(:history_model) do
+            "#{namespace_name}::#{name}".constantize
           end
 
-          const_set(name, version_model)
+          const_set(model_name, history_model)
         end
 
         def namespace(name, &block)
           new_namespace = Module.new do
-            include Namespace
+            include HistoryModelNamespace
           end
 
           const_set(name, new_namespace)

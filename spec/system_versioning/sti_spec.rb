@@ -7,20 +7,11 @@ RSpec.describe "sti" do
       t.string :type, :string
     end
 
-    stub_const("Version", Module.new do
-      include SystemVersioning::Namespace
-    end)
+    history_model_namespace
 
-    model "ApplicationRecord" do
-      self.abstract_class = true
-
-      include SystemVersioning
-
-      system_versioning
-    end
-    model "Vehicle", ApplicationRecord
-    model "Car", Vehicle
-    model "Truck", Vehicle
+    system_versioned_model "Vehicle"
+    system_versioned_model "Car", Vehicle
+    system_versioned_model "Truck", Vehicle
   end
 
   after do
@@ -29,33 +20,70 @@ RSpec.describe "sti" do
   end
 
   it "::instantiate returns version class for type" do
-    expect(Version::Vehicle.instantiate({"type" => "Car"}).class)
-      .to eq(Version::Car)
+    expect(History::Vehicle.instantiate({"type" => "Car"}).class)
+      .to eq(History::Car)
 
-    expect(Version::Vehicle.instantiate({"type" => "Truck"}).class)
-      .to eq(Version::Truck)
+    expect(History::Vehicle.instantiate({"type" => "Truck"}).class)
+      .to eq(History::Truck)
 
-    expect(Version::Vehicle.find_sti_class("Car")).to eq(Version::Car)
-    expect(Version::Vehicle.find_sti_class("Truck")).to eq(Version::Truck)
+    expect(History::Vehicle.find_sti_class("Car")).to eq(History::Car)
+    expect(History::Vehicle.find_sti_class("Truck")).to eq(History::Truck)
   end
 
-  it "x" do
+  it "records are instantiated with the correct class" do
     Car.create!
     Truck.create!
 
-    car_version = Version::Car.sole
-    truck_version = Version::Truck.sole
+    car_version = History::Car.sole
+    truck_version = History::Truck.sole
 
     expect(car_version.type).to eq("Car")
     expect(truck_version.type).to eq("Truck")
   end
 
-  it "y" do
-    Car.create!(name: "Sam", type: "Car")
-    Truck.create!(name: "Will", type: "Truck")
+  it "queries are filtered by their type" do
+    Car.create!
+    Truck.create!
 
-    expect(Version::Vehicle.all.count).to eq(2)
-    expect(Version::Car.all.count).to eq(1)
-    expect(Version::Truck.all.count).to eq(1)
+    expect(History::Vehicle.all.count).to eq(2)
+    expect(History::Car.all.count).to eq(1)
+    expect(History::Truck.all.count).to eq(1)
+  end
+
+  context "when using a different namespace" do
+    before do
+      history_model_namespace "Versions"
+    end
+
+    it "::instantiate returns version class for type" do
+      expect(Versions::Vehicle.instantiate({"type" => "Car"}).class)
+        .to eq(Versions::Car)
+
+      expect(Versions::Vehicle.instantiate({"type" => "Truck"}).class)
+        .to eq(Versions::Truck)
+
+      expect(Versions::Vehicle.find_sti_class("Car")).to eq(Versions::Car)
+      expect(Versions::Vehicle.find_sti_class("Truck")).to eq(Versions::Truck)
+    end
+
+    it "records are instantiated with the correct class" do
+      Car.create!
+      Truck.create!
+
+      car_version = Versions::Car.sole
+      truck_version = Versions::Truck.sole
+
+      expect(car_version.type).to eq("Car")
+      expect(truck_version.type).to eq("Truck")
+    end
+
+    it "queries are filtered by their type" do
+      Car.create!
+      Truck.create!
+
+      expect(Versions::Vehicle.all.count).to eq(2)
+      expect(Versions::Car.all.count).to eq(1)
+      expect(Versions::Truck.all.count).to eq(1)
+    end
   end
 end

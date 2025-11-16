@@ -16,10 +16,10 @@ require_relative "temporal/patches/join_dependency"
 require_relative "temporal/patches/merger"
 require_relative "temporal/patches/relation"
 require_relative "temporal/patches/through_association"
-require_relative "temporal/system_versioning"
 require_relative "temporal/system_versioning/command_recorder"
+require_relative "temporal/system_versioning/history_model_namespace"
+require_relative "temporal/system_versioning/history_model"
 require_relative "temporal/system_versioning/migration"
-require_relative "temporal/system_versioning/namespace"
 require_relative "temporal/system_versioning/schema_creation"
 require_relative "temporal/system_versioning/schema_definitions"
 require_relative "temporal/system_versioning/schema_statements"
@@ -30,6 +30,7 @@ module ActiveRecord::Temporal
   ScopeRegistry = ActiveRecord::Temporal::Querying::ScopeRegistry
   SystemVersioned = ActiveRecord::Temporal::SystemVersioning::SystemVersioned
   Migration = ActiveRecord::Temporal::SystemVersioning::Migration
+  HistoryModel = ActiveRecord::Temporal::SystemVersioning::HistoryModel
 end
 
 ActiveSupport.on_load(:active_record) do
