@@ -30,7 +30,7 @@ module ActiveRecord::Temporal
           end
         end
 
-        [new_revision, record]
+        new_revision
       end
     end
 

@@ -36,7 +36,7 @@ Read more details [here](#system-versioning).
 
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
-  using Temporal::SchemaStatements
+  using ActiveRecord::Temporal::Migration
 
   def change
     create_table :employees, system_versioning: true do |t|
@@ -46,10 +46,12 @@ class CreateEmployees < ActiveRecord::Migration[8.1]
 end
 
 module History
-  include Temporal::SystemVersioningNamespace
+  include ActiveRecord::Temporal::HistoryModelNamespace
 end
 
-class Employee < ActiveRecord::Base; end
+class Employee < ActiveRecord::Base
+  include ActiveRecord::Temporal::SystemVersioned
+end
 
 Employee.create(salary: 75)            # Executed on 1999-12-31
 Employee.create(salary: 100)           # Executed on 2000-01-07
@@ -58,9 +60,9 @@ Employee.last.destroy                  # Executed on 2000-01-28
 
 History::Employee.all
 # => [
-#   #<Employee id: 1, salary: 75, system_period: 1999-12-31...>,
-#   #<Employee id: 2, salary: 100, system_period: 2000-01-07...2000-01-14>,
-#   #<Employee id: 2, salary: 200, system_period: 2000-01-14...2000-01-28>
+#   #<History::Employee id: 1, salary: 75, system_period: 1999-12-31...>,
+#   #<History::Employee id: 2, salary: 100, system_period: 2000-01-07...2000-01-14>,
+#   #<History::Employee id: 2, salary: 200, system_period: 2000-01-14...2000-01-28>
 # ]
 ```
 
@@ -76,7 +78,7 @@ Read more details [here](#application-versioning).
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
   def change
-    using Temporal::SchemaStatements
+    using ActiveRecord::Temporal::Migration
 
     create_table :employees, application_versioning: :validity do |t|
       t.integer :salary
@@ -85,7 +87,7 @@ class CreateEmployees < ActiveRecord::Migration[8.1]
 end
 
 class Employee < ActiveRecord::Base
-  include Temporal::ApplicationVersioned
+  include ActiveRecord::Temporal::ApplicationVersioned
 
   self.time_dimension = :validity
 end
@@ -116,20 +118,25 @@ Employee.all
 Read more details [here](#time-travel-queries).
 
 ```ruby
-# Using system versioning
 module History
-  include Temporal::SystemVersioningNamespace
+  include ActiveRecord::Temporal::HistoryModelNamespace
 end
 
 class Product < ActiveRecord::Base
+  include ActiveRecord::Temporal::SystemVersioned
+
   has_many :lines
 end
 
 class Line < ActiveRecord::Base
+  include ActiveRecord::Temporal::SystemVersioned
+
   belongs_to :product
 end
 
 class Order < ActiveRecord::Base
+  include ActiveRecord::Temporal::SystemVersioned
+
   has_many :lines
   has_many :products, through: :lines
 end
@@ -181,7 +188,7 @@ create_table :accounts do |t|
 end
 
 class Account < ActiveRecord::Base
-  include Temporal::Querying
+  include ActiveRecord::Temporal::Querying
 
   self.time_dimension = :lifespan
 end
@@ -199,7 +206,7 @@ The `at_time` scope is implemented as a simple `where` query that uses PostgreSQ
 
 ```ruby
 class Product < ActiveRecord::Base
-  include Temporal::Querying
+  include ActiveRecord::Temporal::Querying
 
   self.time_dimension = :validity
 
@@ -233,7 +240,7 @@ Models without the underlying time range column can still include `Temporal::Que
 
 ```ruby
 class Product < ActiveRecord::Base
-  include Temporal::Querying
+  include ActiveRecord::Temporal::Querying
 
   self.time_dimension = :validity
 
@@ -246,12 +253,12 @@ Temporal associations are implemented as association scopes and will be merged w
 ### Block-scoped Default Time
 
 ```ruby
-Temporal::ScopedQueries.at Time.parse("2011-04-30") do
+ActiveRecord::Temporal::ScopedQueries.at Time.parse("2011-04-30") do
   Product.all                                 # => All products as of 2011-04-30
   Product.find_by!(sku: "prod_88fa9d").prices # => All associated prices as of 2011-04-30
   Product.as_of(Time.current)                 # => All current products
 
-  Temporal::ScopedQueries.at Time.parse("1990-06-07") do
+  ActiveRecord::Temporal::ScopedQueries.at Time.parse("1990-06-07") do
     Product.all                               # => All products as of 1990-06-07
   end
 end
@@ -264,12 +271,12 @@ A block can be passed to `Temporal::ScopedQueries.at` to apply a default tempora
 ```ruby
 class ApplicationController < ActionController::Base
   around_action do |controller, action|
-    Temporal::ScopedQueries.at(Time.current, &action)
+    ActiveRecord::Temporal::ScopedQueries.at(Time.current, &action)
   end
 end
 
 class ApplicationRecord < ActiveRecord::Base
-  include Temporal::Querying
+  include ActiveRecord::Temporal::Querying
 
   self.time_dimension = :validity
 
@@ -406,7 +413,7 @@ Using `Temporal::SchemaStatements` adds the `system_versioning` option to `creat
 
 ```ruby
 class CreateProducts < ActiveRecord::Base
-  using Temporal::SchemaStatements
+  using ActiveRecord::Temporal::Migration
 
   def change
     create_table :products, system_versioning: true do |t|
@@ -489,7 +496,7 @@ class Product < ActiveRecord::Base
 end
 
 class HistoryProduct < Product
-  include Temporal::SystemVersioned
+  include ActiveRecord::Temporal::SystemVersioned
 end
 
 HistoryProduct.primary_key            # => ["id", "system_period"]

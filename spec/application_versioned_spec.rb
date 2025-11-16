@@ -53,11 +53,11 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioned do
 
   describe "#revise_at" do
     it "creates a revision at the given time" do
-      new_user, old_user = user.revise_at(t+1).with(name: "Sam")
+      new_user = user.revise_at(t+1).with(name: "Sam")
 
       expect(User.count).to eq(2)
 
-      expect(old_user).to have_attributes(
+      expect(user).to have_attributes(
         id_value: 1,
         name: "Bob",
         version: 1,
@@ -74,9 +74,9 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioned do
 
   describe "#revise" do
     it "creates a revision at the current time" do
-      new_user, old_user = user.revise.with(name: "Sam")
+      new_user = user.revise.with(name: "Sam")
 
-      expect(old_user).to have_attributes(
+      expect(user).to have_attributes(
         id_value: 1,
         name: "Bob",
         version: 1,
@@ -91,22 +91,22 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioned do
     end
 
     it "it creates a revision at the ambient time if set" do
-      new_user, old_user = nil
+      new_user = nil
 
       Querying::Scoping.at({validity: t+1}) do
-        new_user, old_user = user.revise.with(name: "Sam")
+        new_user = user.revise.with(name: "Sam")
       end
 
-      expect(old_user).to have_attributes(validity: t-1...t+1)
+      expect(user).to have_attributes(validity: t-1...t+1)
       expect(new_user).to have_attributes(validity: t+1...nil)
     end
   end
 
   describe "#revision_at" do
     it "initializes a revision at the given time" do
-      new_user, old_user = user.revision_at(t+1).with(name: "Sam")
+      new_user = user.revision_at(t+1).with(name: "Sam")
 
-      expect(old_user.changes).to eq("validity" => [t-1...nil, t-1...t+1])
+      expect(user.changes).to eq("validity" => [t-1...nil, t-1...t+1])
       expect(new_user).to_not be_persisted
       expect(new_user).to have_attributes(
         id_value: 1,
@@ -119,9 +119,9 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioned do
 
   describe "#revision" do
     it "initializes a revision at the current time" do
-      new_user, old_user = user.revision.with(name: "Sam")
+      new_user = user.revision.with(name: "Sam")
 
-      expect(old_user.changes).to eq("validity" => [t-1...nil, t-1...Time.current])
+      expect(user.changes).to eq("validity" => [t-1...nil, t-1...Time.current])
       expect(new_user).to_not be_persisted
       expect(new_user).to have_attributes(
         id_value: 1,
@@ -132,13 +132,13 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioned do
     end
 
     it "it initializes a revision at the ambient time if set" do
-      new_user, old_user = nil
+      new_user = nil
 
       ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
-        new_user, old_user = user.revision.with(name: "Sam")
+        new_user = user.revision.with(name: "Sam")
       end
 
-      expect(old_user).to have_attributes(validity: t-1...t+1)
+      expect(user).to have_attributes(validity: t-1...t+1)
       expect(new_user).to have_attributes(validity: t+1...nil)
     end
   end
