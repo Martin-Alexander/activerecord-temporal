@@ -23,20 +23,7 @@ module ActiveRecordTemporalTests
     end
 
     def system_versioned_table(name, **options, &block)
-      source_table_name = name
-      history_table_name = "#{name}_history"
-
-      table source_table_name, **options, &block
-
-      table history_table_name, primary_key: [:id, :system_period] do |t|
-        instance_exec(t, &block) if block
-
-        t.bigint :id, null: false
-        t.tstzrange :system_period, null: false
-      end
-
-      columns = conn.columns(source_table_name).map(&:name)
-      conn.create_versioning_hook(source_table_name, history_table_name, columns: columns)
+      conn.create_table_with_system_versioning name, **options, &block
     end
 
     private
