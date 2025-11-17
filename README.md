@@ -1,6 +1,8 @@
 # Active Record Temporal
 
-An Active Record plugin for temporal data modeling in PostgreSQL. Record historical data and query it at any point in time using the full power of Active Record.
+This gem is an Active Record plugin for temporal data modeling in PostgreSQL.
+
+It provides both system versioning and application versioning. They can be used alone, in parallel, or in conjunction (e.g., for bitemporal data). Both systems use the same interface for time-travel queries.
 
 ## Why Temporal Data?
 
@@ -14,7 +16,6 @@ As applications mature, changing business requirements become increasingly compl
 Many Rails applications use a patchwork of approaches:
 
 - **Soft deletes** with a `deleted_at` column, but updates that still permanently overwrite data.
-- **Ad-hoc snapshot tables** that lack a unified structure, must each be maintained differently, and require custom handling to associate with other models.
 - **Audit gems or JSON columns** that serialize changes. Their data doesn't evolve with schema changes and cannot be easily integrated into Active Record queries, scopes, and associations.
 - **Event systems** that are used to fill gaps in the data model and gradually take on responsibilities that are implementation details with no business relevance.
 
@@ -22,17 +23,22 @@ Temporal databases solve these problems by providing a simple and coherent data 
 
 This can be a versioning strategy that operates automatically at the database level or one where versioning is used up front as the default method for all CRUD operations on a table.
 
-## Overview
+## Requirements
 
-This gem provides both system versioning and application versioning. They can be used alone, in parallel, or in conjunction (e.g., for bitemporal data modelling), and use the same Active Record interface for time-travel queries.
+- Active Record >= 8
+- PostgreSQL >= 13
 
-### System Versioning Overview
+## Quick Start
 
-- Maintained by the database using PostgreSQL triggers and operates out of sight of Active Record
-- History tables can be easily added to existing tables to provide temporal features where needed
-- Version a subset of a table's columns if storage space is a concern
+```ruby
+# Gemfile
 
-Read more details [here](#system-versioning).
+gem "activerecord-temporal"
+```
+
+### Adding a System Versioned Table
+
+This will create a regular `employees` table and an `employees_history` table that tracks all changes.
 
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
@@ -44,35 +50,59 @@ class CreateEmployees < ActiveRecord::Migration[8.1]
     end
   end
 end
+```
 
+Create the namespace that all history models will exist in. If you're using Rails, I suggest you put this somewhere where it can be reloaded by Zeitwerk.
+
+```ruby
 module History
   include ActiveRecord::Temporal::HistoryModelNamespace
 end
+```
 
+Include `ActiveRecord::Temporal` and enable system versioning.
+
+```ruby
 class ApplicationRecord < ActiveRecord::Base
-  primary_abstract_class
+  # [...]
 
   include ActiveRecord::Temporal
 
   system_versioning
 end
+```
 
+Call `system_versioned` on the model that now has a system versioned table.
+
+```ruby
 class Employee < ApplicationRecord
   system_versioned
 end
+```
 
+Manipulate data as normal and use the time-travel query interface to read data as it was at any time in the past.
+
+```ruby
 Employee.create(salary: 75)            # Executed on 1999-12-31
 Employee.create(salary: 100)           # Executed on 2000-01-07
 Employee.last.update(salary: 200)      # Executed on 2000-01-14
 Employee.last.destroy                  # Executed on 2000-01-28
 
-History::Employee.all
+Employee.history
 # => [
-#   #<History::Employee id: 1, salary: 75, system_period: 1999-12-31...>,
+#   #<History::Employee id: 1, salary: 75, system_period: 1999-12-31...2000-01-07>,
 #   #<History::Employee id: 2, salary: 100, system_period: 2000-01-07...2000-01-14>,
 #   #<History::Employee id: 2, salary: 200, system_period: 2000-01-14...2000-01-28>
 # ]
+
+Employee.as_of(Time.parse("2000-01-07"))
+# => [#<History::Employee id: 1, salary: 75, system_period: 1999-12-31...2000-01-07>]
 ```
+
+#### Read more
+ - [Time-travel Queries](#system-versioning)
+ - [System Versioning](#system-versioning)
+ - [History Model Namespace](#system-versioning)
 
 ### Application Versioning Overview
 
@@ -183,11 +213,6 @@ Temporal::ScopedQueries.at 1.year.ago do
   products = Product.as_of(Time.current)    # Ignore scope's default time
 end
 ```
-
-## Requirements
-
-- Active Record >= 8
-- PostgreSQL >= 13
 
 ## Installation
 
@@ -308,6 +333,10 @@ Although temporal associations are scoped to the current time by default, non-as
 So far, everything shown works with or without versioning.
 
 ## System Versioning
+
+<!-- - Maintained by the database using PostgreSQL triggers and operates out of sight of Active Record
+- History tables can be easily added to existing tables to provide temporal features where needed
+- Version a subset of a table's columns if storage space is a concern -->
 
 The temporal model of this gem is based on the SQL specification. It's also roughly the same model used by RDMSs like [MarianaDB](https://mariadb.com/docs/server/reference/sql-structure/temporal-tables/system-versioned-tables) and [Microsoft SQL Server](https://learn.microsoft.com/en-us/sql/relational-databases/tables/temporal-tables?view=sql-server-ver17), and by the PostgreSQL extension [Temporal Tables Extension](https://github.com/arkhipov/temporal_tables) and its PL/pgSQL version [Temporal Tables](https://github.com/nearform/temporal_tables).
 
