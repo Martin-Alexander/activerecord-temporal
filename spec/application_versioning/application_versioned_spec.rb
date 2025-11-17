@@ -55,6 +55,22 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
 
   let(:user) { User.create!(id_value: 1, name: "Bob", validity: t-1...nil) }
 
+  describe "initialization" do
+    it "validity defaults to nil" do
+      expect(User.new.validity).to be_nil
+    end
+
+    it "validity is set to global scope" do
+      Querying::Scoping.at({validity: t+1}) do
+        expect(User.new.validity).to eq(t+1...nil)
+      end
+
+      Querying::Scoping.at(t+1) do
+        expect(User.new.validity).to eq(t+1...nil)
+      end
+    end
+  end
+
   describe "#revise_at" do
     it "creates a revision at the given time" do
       new_user = user.revise_at(t+1).with(name: "Sam")
@@ -73,6 +89,17 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
         version: 2,
         validity: t+1...nil
       )
+    end
+
+    it "it creates a revision at the given time in a time scope" do
+      new_user = nil
+
+      Querying::Scoping.at({validity: t+1}) do
+        new_user = user.revise_at(t+2).with(name: "Sam")
+      end
+
+      expect(user).to have_attributes(validity: t-1...t+2)
+      expect(new_user).to have_attributes(validity: t+2...nil)
     end
   end
 
@@ -94,7 +121,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
       )
     end
 
-    it "it creates a revision at the ambient time if set" do
+    it "it creates a revision at the global time if set" do
       new_user = nil
 
       Querying::Scoping.at({validity: t+1}) do
@@ -119,6 +146,17 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
         validity: t+1...nil
       )
     end
+
+    it "it creates a revision at the given time in a time scope" do
+      new_user = nil
+
+      Querying::Scoping.at({validity: t+1}) do
+        new_user = user.revision_at(t+2).with(name: "Sam")
+      end
+
+      expect(user).to have_attributes(validity: t-1...t+2)
+      expect(new_user).to have_attributes(validity: t+2...nil)
+    end
   end
 
   describe "#revision" do
@@ -135,7 +173,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
       )
     end
 
-    it "it initializes a revision at the ambient time if set" do
+    it "it initializes a revision at the global time if set" do
       new_user = nil
 
       ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
@@ -152,6 +190,14 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
       expect { user.inactivate_at(t+2) }
         .to(change { user.reload.validity }.from(t-1...nil).to(t-1...t+2))
     end
+
+    it "it inactivates a record at the given time in a time scope" do
+      Querying::Scoping.at({validity: t+1}) do
+        user.inactivate_at(t+2)
+      end
+
+      expect(user).to have_attributes(validity: t-1...t+2)
+    end
   end
 
   describe "#inactivate" do
@@ -161,7 +207,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
       expect(user.reload.validity).to eq(t-1...t)
     end
 
-    it "inactivates a record at the ambient time if set" do
+    it "inactivates a record at the global time if set" do
       ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
         user.inactivate
 

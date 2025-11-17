@@ -80,6 +80,16 @@ module ActiveRecord::Temporal
         set_time_dimension_end(time)
         save
       end
+
+      def initialize_internals_callback
+        super
+
+        time = Querying::ScopeRegistry.global_constraint_for(default_time_dimension)
+
+        if time
+          _assign_attributes(default_time_dimension => time...nil)
+        end
+      end
     end
   end
 end
