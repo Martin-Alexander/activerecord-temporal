@@ -2,12 +2,12 @@ module ActiveRecord::Temporal
   module Querying
     class Scoping
       class << self
-        def at(time_coords, &block)
-          if time_coords.is_a?(Hash)
-            with_global_constraint(time_coords, &block)
+        def at(time_or_time_coords, &block)
+          if time_or_time_coords.is_a?(Hash)
+            with_global_constraint(time_or_time_coords, &block)
           else
             without_global_constraints do
-              with_universal_global_constraint_time(time_coords, &block)
+              with_universal_global_constraint_time(time_or_time_coords, &block)
             end
           end
         end
