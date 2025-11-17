@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "rails", path: "~/code/Martin-Alexander/rails"
+gem "rails"
 gem "debug"
 gem "rake"
 gem "rspec"

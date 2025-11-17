@@ -202,27 +202,31 @@ RSpec.describe "migrations" do
       end
     end
 
-    context "without system versioning and with block" do
-      let(:migration_change) do
-        -> do
-          drop_table :authors do |t|
-            t.string :name
+    # Reversing drop_table with block was fixed here
+    # https://github.com/rails/rails/commit/94108c92bfe76fa3ed4bda03cb8dcddaf18b8aac
+    if ActiveRecord.version > Gem::Version.new("8.0.1")
+      context "without system versioning and with block" do
+        let(:migration_change) do
+          -> do
+            drop_table :authors do |t|
+              t.string :name
+            end
           end
         end
-      end
 
-      it "is reversible" do
-        conn.create_table :authors do |t|
-          t.string :name
+        it "is reversible" do
+          conn.create_table :authors do |t|
+            t.string :name
+          end
+
+          migration.migrate(:up)
+
+          expect(conn.table_exists?(:authors)).to eq(false)
+
+          migration.migrate(:down)
+
+          expect(test_conn.table(:authors)).to have_column(:name)
         end
-
-        migration.migrate(:up)
-
-        expect(conn.table_exists?(:authors)).to eq(false)
-
-        migration.migrate(:down)
-
-        expect(test_conn.table(:authors)).to have_column(:name)
       end
     end
 
