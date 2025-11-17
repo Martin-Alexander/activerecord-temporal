@@ -3,7 +3,7 @@ module ActiveRecord::Temporal
     class AssociationScope
       class << self
         def build(block)
-          scope = build_scope(block)
+          scope = merge_scopes(block)
 
           def scope.temporal_scope? = true
 
@@ -12,7 +12,7 @@ module ActiveRecord::Temporal
 
         private
 
-        def build_scope(block)
+        def merge_scopes(block)
           temporal_scope = build_temporal_scope
 
           if !block
@@ -29,7 +29,7 @@ module ActiveRecord::Temporal
           end
 
           ->(owner = nil) do
-            base = instance_exec(owner, &block)
+            base = instance_exec(&block)
             instance_exec(owner, base, &temporal_scope)
           end
         end

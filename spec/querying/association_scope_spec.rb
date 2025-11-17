@@ -111,8 +111,7 @@ RSpec.describe ActiveRecord::Temporal::Querying::AssociationScope do
   context "given a scope" do
     before do
       Author.class_eval do
-        has_many :books,
-          temporal_association_scope { where(name: "Foo old") }
+        has_many :books, -> { where(name: "Foo old") }, temporal: true
       end
     end
 
@@ -172,10 +171,7 @@ RSpec.describe ActiveRecord::Temporal::Querying::AssociationScope do
   context "given an instance-dependent scope" do
     before do
       Author.class_eval do
-        has_many :books,
-          temporal_association_scope { |owner|
-            (owner.name == "Bob") ? where(name: "Foo new") : none
-          }
+        has_many :books, ->(owner) { (owner.name == "Bob") ? where(name: "Foo new") : none }, temporal: true
       end
     end
 

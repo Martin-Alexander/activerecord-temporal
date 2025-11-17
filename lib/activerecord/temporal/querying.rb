@@ -5,10 +5,6 @@ module ActiveRecord::Temporal
     extend ActiveSupport::Concern
 
     class_methods do
-      def temporal_association_scope(&block)
-        AssociationScope.build(block)
-      end
-
       def resolve_time_coords(time_or_time_coords)
         return time_or_time_coords if time_or_time_coords.is_a?(Hash)
 
