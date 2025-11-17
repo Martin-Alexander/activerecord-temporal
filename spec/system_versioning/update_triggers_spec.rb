@@ -9,7 +9,7 @@ RSpec.describe "update triggers" do
 
     history_model_namespace
 
-    history_model_base_class "ApplicationRecord"
+    system_versioning_base "ApplicationRecord"
 
     system_versioned_model "Book", ApplicationRecord
   end

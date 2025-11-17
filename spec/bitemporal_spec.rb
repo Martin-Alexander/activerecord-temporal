@@ -13,11 +13,18 @@ RSpec.describe "bitemporal" do
 
     history_model_namespace
 
-    model "Author" do
-      include ActiveRecord::Temporal::SystemVersioned
-      include ActiveRecord::Temporal::ApplicationVersioned
+    model "ApplicationRecord" do
+      self.abstract_class = true
 
-      self.time_dimensions = :validity
+      include ActiveRecord::Temporal
+
+      system_versioning
+      application_versioning dimensions: :validity
+    end
+
+    model "Author", ApplicationRecord do
+      application_versioned
+      system_versioned
     end
   end
 

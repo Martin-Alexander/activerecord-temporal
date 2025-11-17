@@ -9,7 +9,7 @@ RSpec.describe "sti" do
 
     history_model_namespace
 
-    history_model_base_class "ApplicationRecord"
+    system_versioning_base "ApplicationRecord"
 
     system_versioned_model "Vehicle", ApplicationRecord
     system_versioned_model "Car", Vehicle
@@ -56,11 +56,7 @@ RSpec.describe "sti" do
     before do
       history_model_namespace "Versions"
 
-      model "MyBaseClass" do
-        self.abstract_class = true
-
-        include ActiveRecord::Temporal::HistoryModels
-
+      system_versioning_base "MyBaseClass" do
         def self.history_model_namespace
           Versions
         end

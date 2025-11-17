@@ -17,7 +17,7 @@ RSpec.describe "system versioning associations" do
 
     history_model_namespace
 
-    history_model_base_class "ApplicationRecord"
+    system_versioning_base "ApplicationRecord"
 
     model "Library", ApplicationRecord do
       has_many :books
@@ -93,26 +93,26 @@ RSpec.describe "system versioning associations" do
   context "when not using the history model namespace" do
     before do
       model "HistoryLibrary", Library do
-        include HistoryModel
+        include ActiveRecord::Temporal::SystemVersioning::HistoryModel
 
         has_many :books, class_name: "HistoryBook", foreign_key: :library_id
         has_many :pics, as: :picable, class_name: "HistoryPic"
       end
       model "HistoryAuthor", Author do
-        include HistoryModel
+        include ActiveRecord::Temporal::SystemVersioning::HistoryModel
 
         has_many :books, class_name: "HistoryBook", foreign_key: :author_id
         has_many :libraries, through: :books, class_name: "HistoryLibrary"
         has_many :pics, as: :picable, class_name: "HistoryPic"
       end
       model "HistoryBook", Book do
-        include HistoryModel
+        include ActiveRecord::Temporal::SystemVersioning::HistoryModel
 
         belongs_to :author, class_name: "HistoryAuthor", foreign_key: :author_id
         belongs_to :library, class_name: "HistoryLibrary", foreign_key: :library_id
       end
       model "HistoryPic", Pic do
-        include HistoryModel
+        include ActiveRecord::Temporal::SystemVersioning::HistoryModel
       end
     end
 

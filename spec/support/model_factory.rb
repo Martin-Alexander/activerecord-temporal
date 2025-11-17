@@ -17,7 +17,7 @@ module ActiveRecordTemporalTests
 
     def system_versioned_model(name, super_class = ActiveRecord::Base, &block)
       klass = Class.new(super_class) do
-        include ActiveRecord::Temporal::SystemVersioned
+        system_versioned
 
         instance_eval(&block) if block
       end
@@ -25,11 +25,13 @@ module ActiveRecordTemporalTests
       stub_const(name, klass)
     end
 
-    def history_model_base_class(name, &block)
+    def system_versioning_base(name, &block)
       klass = Class.new(ActiveRecord::Base) do
         self.abstract_class = true
 
-        include ActiveRecord::Temporal::HistoryModels
+        include ActiveRecord::Temporal
+
+        system_versioning
 
         instance_eval(&block) if block
       end

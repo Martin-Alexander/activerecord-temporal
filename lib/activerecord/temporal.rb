@@ -1,7 +1,6 @@
 require "active_support"
 
-require_relative "temporal/application_versioned"
-require_relative "temporal/querying"
+require_relative "temporal/application_versioning/application_versioned"
 require_relative "temporal/querying/association_macros"
 require_relative "temporal/querying/association_scope"
 require_relative "temporal/querying/association_walker"
@@ -25,15 +24,21 @@ require_relative "temporal/system_versioning/schema_creation"
 require_relative "temporal/system_versioning/schema_definitions"
 require_relative "temporal/system_versioning/schema_statements"
 require_relative "temporal/system_versioning/system_versioned"
+require_relative "temporal/application_versioning"
+require_relative "temporal/querying"
+require_relative "temporal/system_versioning"
 
 module ActiveRecord::Temporal
-  Scoping = ActiveRecord::Temporal::Querying::Scoping
-  ScopeRegistry = ActiveRecord::Temporal::Querying::ScopeRegistry
-  SystemVersioned = ActiveRecord::Temporal::SystemVersioning::SystemVersioned
-  Migration = ActiveRecord::Temporal::SystemVersioning::Migration
-  HistoryModel = ActiveRecord::Temporal::SystemVersioning::HistoryModel
-  HistoryModelNamespace = ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace
-  HistoryModels = ActiveRecord::Temporal::SystemVersioning::HistoryModels
+  def system_versioning
+    include SystemVersioning
+  end
+
+  def application_versioning(**options)
+    include Querying
+    include ApplicationVersioning
+
+    self.time_dimensions = options[:dimensions] if options[:dimensions]
+  end
 end
 
 ActiveSupport.on_load(:active_record) do

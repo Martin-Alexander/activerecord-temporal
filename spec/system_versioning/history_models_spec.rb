@@ -1,6 +1,8 @@
 require "spec_helper"
 
 RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
+  include ActiveRecord::Temporal
+
   after do
     drop_all_tables
     drop_all_versioning_hooks
@@ -9,26 +11,24 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
   describe "::history_model_namespace" do
     it "defaults to `History`" do
       history_model_namespace
+      system_versioning_base "ApplicationRecord"
+      system_versioned_model "Post", ApplicationRecord
 
-      model "ApplicationRecord" do
-        include ActiveRecord::Temporal::SystemVersioning::HistoryModels
-      end
-
-      expect(ApplicationRecord.history_model_namespace).to eq(History)
+      expect(Post.history_model).to eq(History::Post)
     end
 
     it "can be overwritten" do
       history_model_namespace "Versions"
 
-      model "ApplicationRecord" do
-        include ActiveRecord::Temporal::SystemVersioning::HistoryModels
-
+      system_versioning_base "ApplicationRecord" do
         def self.history_model_namespace
           Versions
         end
       end
 
-      expect(ApplicationRecord.history_model_namespace).to eq(Versions)
+      system_versioned_model "Post", ApplicationRecord
+
+      expect(Post.history_model).to eq(Versions::Post)
     end
   end
 
@@ -39,14 +39,14 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
       model "ApplicationRecord" do
         self.abstract_class = true
 
-        include ActiveRecord::Temporal::SystemVersioning::HistoryModels
+        include SystemVersioning::HistoryModels
       end
     end
 
     it "raises error on abstract classes" do
       expect { ApplicationRecord.history_model }
         .to raise_error(
-          ActiveRecord::Temporal::SystemVersioning::HistoryModels::Error,
+          SystemVersioning::HistoryModels::Error,
           "abstract classes cannot have a history model"
         )
     end
@@ -64,7 +64,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
         end
       end
       model "MyCakeHistory", Cake do
-        include ActiveRecord::Temporal::HistoryModel
+        include SystemVersioning::HistoryModel
       end
 
       expect(Cake.history_model).to eq(MyCakeHistory)
@@ -74,18 +74,13 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
   describe "::history" do
     before do
       history_model_namespace
-
-      model "ApplicationRecord" do
-        self.abstract_class = true
-
-        include ActiveRecord::Temporal::SystemVersioning::HistoryModels
-      end
+      system_versioning_base "ApplicationRecord"
     end
 
     it "raises error on abstract classes" do
       expect { ApplicationRecord.history }
         .to raise_error(
-          ActiveRecord::Temporal::SystemVersioning::HistoryModels::Error,
+          SystemVersioning::HistoryModels::Error,
           "abstract classes cannot have a history model"
         )
     end
@@ -102,15 +97,8 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
   describe "::at_time" do
     it "is delegated to ::history" do
       history_model_namespace
-
-      model "ApplicationRecord" do
-        self.abstract_class = true
-
-        include ActiveRecord::Temporal::SystemVersioning::HistoryModels
-      end
-
+      system_versioning_base "ApplicationRecord"
       system_versioned_table :cakes
-
       system_versioned_model "Cake", ApplicationRecord
 
       insert_time = transaction_time { Cake.create! }
@@ -123,15 +111,8 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
   describe "::as_of" do
     it "is delegated to ::history" do
       history_model_namespace
-
-      model "ApplicationRecord" do
-        self.abstract_class = true
-
-        include ActiveRecord::Temporal::SystemVersioning::HistoryModels
-      end
-
+      system_versioning_base "ApplicationRecord"
       system_versioned_table :cakes
-
       system_versioned_model "Cake", ApplicationRecord
 
       insert_time = transaction_time { Cake.create! }

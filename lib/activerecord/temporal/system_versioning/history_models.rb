@@ -8,10 +8,6 @@ module ActiveRecord::Temporal
       class_methods do
         delegate :at_time, :as_of, to: :history
 
-        def history_model_namespace
-          History
-        end
-
         def history_model
           raise Error, "abstract classes cannot have a history model" if abstract_class?
 
@@ -20,6 +16,12 @@ module ActiveRecord::Temporal
 
         def history
           ActiveRecord::Relation.create(history_model)
+        end
+
+        private
+
+        def history_model_namespace
+          History
         end
       end
     end

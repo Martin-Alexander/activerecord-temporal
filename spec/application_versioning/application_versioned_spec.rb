@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe ActiveRecord::Temporal::ApplicationVersioned do
+RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersioned do
   before do
     conn.enable_extension(:btree_gist)
 
@@ -27,16 +27,20 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioned do
     model "ApplicationRecord" do
       self.abstract_class = true
 
-      include ApplicationVersioned
+      include ActiveRecord::Temporal
 
-      self.time_dimensions = :validity
+      application_versioning dimensions: :validity
     end
 
     model "User", ApplicationRecord do
+      application_versioned
+
       has_many :tasks, temporal: true
     end
 
     model "Task", ApplicationRecord do
+      application_versioned
+
       belongs_to :user, temporal: true
     end
   end

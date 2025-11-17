@@ -52,11 +52,13 @@ end
 class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
 
-  include ActiveRecord::Temporal::HistoryModels
+  include ActiveRecord::Temporal
+
+  system_versioning
 end
 
 class Employee < ApplicationRecord
-  include ActiveRecord::Temporal::SystemVersioned
+  system_versioned
 end
 
 Employee.create(salary: 75)            # Executed on 1999-12-31
@@ -84,8 +86,6 @@ Read more details [here](#application-versioning).
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
   def change
-    include ActiveRecord::Temporal::Migration
-
     create_table :employees, primary_key: [:id, :version] do |t|
       t.bigserial :id, null: false
       t.bigint :version, null: false, default: 1
@@ -95,9 +95,16 @@ class CreateEmployees < ActiveRecord::Migration[8.1]
   end
 end
 
+class ApplicationRecord < ActiveRecord::Base
+  primary_abstract_class
+
+  include ActiveRecord::Temporal
+
+  application_versioning dimension: :validity
+end
+
 class Employee < ActiveRecord::Base
-  include ActiveRecord::Temporal::ApplicationVersioned
-  self.time_dimension = :validity
+  application_versioned
 end
 
 time = Time.parse("2000-01-01")
