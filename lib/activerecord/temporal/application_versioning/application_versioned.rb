@@ -4,7 +4,31 @@ module ActiveRecord::Temporal
       extend ActiveSupport::Concern
 
       included do
+        delegate :scope_time, to: :class
+
         include Querying
+      end
+
+      class_methods do
+        def originate
+          originate_at(scope_time || Time.current)
+        end
+
+        def originate_at(time)
+          Original.new(self, time, save: true)
+        end
+
+        def original
+          original_at(scope_time || Time.current)
+        end
+
+        def original_at(time)
+          Original.new(self, time)
+        end
+
+        def scope_time
+          Querying::ScopeRegistry.global_constraint_for(time_dimensions.first)
+        end
       end
 
       class Revision
@@ -35,6 +59,25 @@ module ActiveRecord::Temporal
         end
       end
 
+      class Original
+        attr_reader :klass, :time, :options
+
+        def initialize(klass, time, **options)
+          @klass = klass
+          @time = time
+          @options = options
+        end
+
+        def with(attributes)
+          new_record = klass.new(attributes)
+          new_record.set_time_dimension_start(time)
+
+          new_record.save if options[:save]
+
+          new_record
+        end
+      end
+
       def after_initialize_revision(old_revision)
         self.version = old_revision.version + 1
         self.id_value = old_revision.id_value
@@ -45,9 +88,7 @@ module ActiveRecord::Temporal
       end
 
       def revise
-        time_coord = Querying::ScopeRegistry.global_constraints
-
-        revise_at(time_coord[default_time_dimension] || Time.current)
+        revise_at(scope_time || Time.current)
       end
 
       def revise_at(time)
@@ -57,9 +98,7 @@ module ActiveRecord::Temporal
       end
 
       def revision
-        time_coord = Querying::ScopeRegistry.global_constraints
-
-        revision_at(time_coord[default_time_dimension] || Time.current)
+        revision_at(scope_time || Time.current)
       end
 
       def revision_at(time)
@@ -69,9 +108,7 @@ module ActiveRecord::Temporal
       end
 
       def inactivate
-        time_coord = Querying::ScopeRegistry.global_constraints
-
-        inactivate_at(time_coord[default_time_dimension] || Time.current)
+        inactivate_at(scope_time || Time.current)
       end
 
       def inactivate_at(time)
@@ -79,16 +116,6 @@ module ActiveRecord::Temporal
 
         set_time_dimension_end(time)
         save
-      end
-
-      def initialize_internals_callback
-        super
-
-        time = Querying::ScopeRegistry.global_constraint_for(default_time_dimension)
-
-        if time
-          _assign_attributes(default_time_dimension => time...nil)
-        end
       end
     end
   end

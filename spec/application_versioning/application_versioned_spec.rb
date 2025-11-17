@@ -48,28 +48,13 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
   after { drop_all_tables }
 
   t = Time.utc(2000)
+  current_time = t
 
   around do |example|
-    travel_to(t, &example)
+    travel_to(current_time, &example)
   end
 
   let(:user) { User.create!(id_value: 1, name: "Bob", validity: t-1...nil) }
-
-  describe "initialization" do
-    it "validity defaults to nil" do
-      expect(User.new.validity).to be_nil
-    end
-
-    it "validity is set to global scope" do
-      Querying::Scoping.at({validity: t+1}) do
-        expect(User.new.validity).to eq(t+1...nil)
-      end
-
-      Querying::Scoping.at(t+1) do
-        expect(User.new.validity).to eq(t+1...nil)
-      end
-    end
-  end
 
   describe "#revise_at" do
     it "creates a revision at the given time" do
@@ -213,6 +198,82 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
 
         expect(user.reload.validity).to eq(t-1...t+1)
       end
+    end
+  end
+
+  describe "::original_at" do
+    it "instantiates new record at the given time" do
+      user = User.original_at(t+1).with(name: "Alice")
+
+      expect(user).to have_attributes(name: "Alice", validity: t+1...nil)
+    end
+
+    it "instantiates new record at the given time in a time scope" do
+      user = ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
+        User.original_at(t+1).with(name: "Alice")
+      end
+
+      expect(user).to have_attributes(name: "Alice", validity: t+1...nil)
+    end
+  end
+
+  describe "::original" do
+    it "instantiates new record at the current time" do
+      user = User.original.with(name: "Alice")
+
+      expect(user)
+        .to have_attributes(name: "Alice", validity: current_time...nil)
+        .and be_new_record
+    end
+
+    it "instantiates new record at the global time if set" do
+      user = ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
+        User.original.with(name: "Alice")
+      end
+
+      expect(user)
+        .to have_attributes(name: "Alice", validity: t+1...nil)
+        .and be_new_record
+    end
+  end
+
+  describe "::originate_at" do
+    it "creates a new record at the given time" do
+      user = User.originate_at(t+1).with(name: "Alice")
+
+      expect(user)
+        .to have_attributes(name: "Alice", validity: t+1...nil)
+        .and be_persisted
+    end
+
+    it "creates a new record at the given time in a time scope" do
+      user = ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
+        User.originate_at(t+1).with(name: "Alice")
+      end
+
+      expect(user)
+        .to have_attributes(name: "Alice", validity: t+1...nil)
+        .and be_persisted
+    end
+  end
+
+  describe "::originate" do
+    it "instantiates new record at the current time" do
+      user = User.originate.with(name: "Alice")
+
+      expect(user)
+        .to have_attributes(name: "Alice", validity: current_time...nil)
+        .and be_persisted
+    end
+
+    it "instantiates new record at the global time if set" do
+      user = ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
+        User.originate.with(name: "Alice")
+      end
+
+      expect(user)
+        .to have_attributes(name: "Alice", validity: t+1...nil)
+        .and be_persisted
     end
   end
 end
