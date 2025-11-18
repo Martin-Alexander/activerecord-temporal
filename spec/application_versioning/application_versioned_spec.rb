@@ -6,22 +6,14 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
   before do
     conn.enable_extension(:btree_gist)
 
-    conn.create_table :users, primary_key: [:id, :version] do |t|
-      t.bigserial :id, null: false
-      t.bigint :version, null: false, default: 1
-      t.tstzrange :validity, null: false
+    application_versioned_table :users do |t|
       t.string :name
-      t.exclusion_constraint "id WITH =, validity WITH &&", using: :gist
     end
 
-    conn.create_table :tasks, primary_key: [:id, :version] do |t|
-      t.bigserial :id, null: false
-      t.bigint :version, null: false, default: 1
-      t.tstzrange :validity, null: false
+    application_versioned_table :tasks do |t|
       t.string :name
       t.boolean :done
       t.references :user
-      t.exclusion_constraint "id WITH =, validity WITH &&", using: :gist
     end
 
     model "ApplicationRecord" do

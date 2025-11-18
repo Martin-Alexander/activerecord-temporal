@@ -23,7 +23,13 @@ module ActiveRecordTemporalTests
     end
 
     def system_versioned_table(name, **options, &block)
+      conn.enable_extension(:btree_gist)
+
       conn.create_table_with_system_versioning name, **options, &block
+    end
+
+    def application_versioned_table(name, **options, &block)
+      conn.create_application_versioned_table name, **options, &block
     end
 
     private

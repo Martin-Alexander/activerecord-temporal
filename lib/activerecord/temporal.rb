@@ -1,6 +1,9 @@
 require "active_support"
 
 require_relative "temporal/application_versioning/application_versioned"
+require_relative "temporal/application_versioning/command_recorder"
+require_relative "temporal/application_versioning/migration"
+require_relative "temporal/application_versioning/schema_statements"
 require_relative "temporal/querying/association_macros"
 require_relative "temporal/querying/association_scope"
 require_relative "temporal/querying/association_walker"
@@ -44,6 +47,12 @@ end
 
 ActiveSupport.on_load(:active_record) do
   require "active_record/connection_adapters/postgresql_adapter" # TODO: add test
+
+  ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
+    .include ActiveRecord::Temporal::ApplicationVersioning::SchemaStatements
+
+  ActiveRecord::Migration::CommandRecorder
+    .include ActiveRecord::Temporal::ApplicationVersioning::CommandRecorder
 
   ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
     .include ActiveRecord::Temporal::SystemVersioning::SchemaStatements

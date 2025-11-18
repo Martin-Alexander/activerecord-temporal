@@ -142,6 +142,27 @@ RSpec.describe "migrations" do
         end
       end
 
+      it "calls #create_table_with_system_versioning" do
+        migration.migrate(:up)
+
+        source_table = test_conn.table(:authors)
+        history_table = test_conn.table(:authors_history)
+        versioning_hook = conn.versioning_hook(:authors)
+
+        expect(source_table.primary_key).to eq("id")
+        expect(source_table).to have_column(:full_name)
+
+        expect(history_table.primary_key).to eq(["id", "system_period"])
+        expect(source_table).to have_column(:full_name)
+
+        expect(versioning_hook).to have_attributes(
+          source_table: "authors",
+          history_table: "authors_history",
+          columns: ["id", "full_name", "book_id"],
+          primary_key: "id"
+        )
+      end
+
       it "is reversible" do
         migration.migrate(:up)
 
@@ -168,6 +189,14 @@ RSpec.describe "migrations" do
         end
       end
 
+      it "falls back on super" do
+        migration.migrate(:up)
+
+        expect(conn.table_exists?(:authors)).to eq(true)
+        expect(conn.table_exists?(:authors_history)).to eq(false)
+        expect(conn.versioning_hook(:authors)).to be_nil
+      end
+
       it "is reversible" do
         migration.migrate(:up)
 
@@ -188,6 +217,16 @@ RSpec.describe "migrations" do
     context "without system versioning and without block" do
       let(:migration_change) do
         -> { drop_table :authors }
+      end
+
+      it "falls back on super when" do
+        conn.create_table_with_system_versioning :authors
+
+        migration.migrate(:up)
+
+        expect(conn.table_exists?(:authors)).to eq(false)
+        expect(conn.table_exists?(:authors_history)).to eq(true)
+        expect(conn.versioning_hook(:authors)).to be_present
       end
 
       it "is not reversible" do
@@ -235,8 +274,18 @@ RSpec.describe "migrations" do
         -> { drop_table :authors, system_versioning: true }
       end
 
+      it "calls #create_table_with_system_versioning" do
+        conn.create_table_with_system_versioning :authors
+
+        migration.migrate(:up)
+
+        expect(conn.table_exists?(:authors)).to eq(false)
+        expect(conn.table_exists?(:authors_history)).to eq(false)
+        expect(conn.versioning_hook(:authors)).to be_nil
+      end
+
       it "is not reversible" do
-        test_conn.create_table :authors, system_versioning: true
+        conn.create_table_with_system_versioning :authors
 
         migration.migrate(:up)
 
@@ -259,7 +308,7 @@ RSpec.describe "migrations" do
       end
 
       it "is not reversible" do
-        test_conn.create_table :authors, system_versioning: true do |t|
+        conn.create_table_with_system_versioning :authors do |t|
           t.string :name
         end
 
@@ -276,7 +325,7 @@ RSpec.describe "migrations" do
       it "is reversible" do
         skip "TODO: support reversing drop_table with system versioning"
 
-        test_conn.create_table :authors, system_versioning: true do |t|
+        conn.create_table_with_system_versioning :authors do |t|
           t.string :name
         end
 

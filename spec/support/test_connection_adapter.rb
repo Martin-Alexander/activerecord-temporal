@@ -1,8 +1,5 @@
 module ActiveRecordTemporalTests
   class TestConnectionAdapter < ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
-    prepend ActiveRecord::Temporal::SystemVersioning::SchemaStatements::CreateTableStatement
-    prepend ActiveRecord::Temporal::SystemVersioning::SchemaStatements::DropTableStatement
-
     PlPgsqlFunction = Struct.new(:name, :body)
 
     class TableWrapper
