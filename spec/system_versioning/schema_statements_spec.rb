@@ -186,6 +186,12 @@ RSpec.describe SystemVersioning::SchemaStatements do
         primary_key: "id"
       )
     end
+
+    it "raises an error given unknown keys" do
+      expect do
+        conn.create_versioning_hook :authors, :authors_history, column: []
+      end.to raise_error(ArgumentError, /Unknown key: :column/)
+    end
   end
 
   describe "#drop_versioning_hook" do
@@ -221,6 +227,12 @@ RSpec.describe SystemVersioning::SchemaStatements do
 
       expect(&drop_hook)
         .to raise_error(ActiveRecord::StatementInvalid, /PG::UndefinedFunction/)
+    end
+
+    it "raises an error given unknown keys" do
+      expect do
+        conn.drop_versioning_hook :authors, :authors_history, column: []
+      end.to raise_error(ArgumentError, /Unknown key: :column/)
     end
   end
 
@@ -437,6 +449,12 @@ RSpec.describe SystemVersioning::SchemaStatements do
       versioning_hook = conn.versioning_hook(:authors)
 
       expect(versioning_hook.columns).to contain_exactly("id", "last_name", "age")
+    end
+
+    it "raises an error given unknown keys" do
+      expect do
+        conn.change_versioning_hook :authors, :authors_history, add_column: []
+      end.to raise_error(ArgumentError, /Unknown key: :add_column/)
     end
   end
 

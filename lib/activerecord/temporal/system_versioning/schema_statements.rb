@@ -47,6 +47,8 @@ module ActiveRecord::Temporal
       end
 
       def create_versioning_hook(source_table, history_table, **options)
+        options.assert_valid_keys(:columns, :primary_key)
+
         column_names = if (columns = options.fetch(:columns)) == :all
           columns(source_table).map(&:name)
         else
@@ -79,6 +81,8 @@ module ActiveRecord::Temporal
       end
 
       def drop_versioning_hook(source_table, history_table, **options)
+        options.assert_valid_keys(:columns, :primary_key, :if_exists)
+
         %i[insert update delete].each do |verb|
           function_name = versioning_function_name(source_table, verb)
 
@@ -116,6 +120,8 @@ module ActiveRecord::Temporal
       end
 
       def change_versioning_hook(source_table, history_table, options)
+        options.assert_valid_keys(:add_columns, :remove_columns)
+
         add_columns = (options[:add_columns] || []).map(&:to_s)
         remove_columns = (options[:remove_columns] || []).map(&:to_s)
 
