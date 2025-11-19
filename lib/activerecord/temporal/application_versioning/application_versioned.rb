@@ -43,6 +43,7 @@ module ActiveRecord::Temporal
         def with(attributes)
           new_revision = record.dup
           new_revision.assign_attributes(attributes)
+          new_revision.id = record.id
           new_revision.set_time_dimension_start(time)
           new_revision.time_tags = record.time_tags
           record.set_time_dimension_end(time)
@@ -80,7 +81,6 @@ module ActiveRecord::Temporal
 
       def after_initialize_revision(old_revision)
         self.version = old_revision.version + 1
-        self.id_value = old_revision.id_value
       end
 
       def head_revision?
