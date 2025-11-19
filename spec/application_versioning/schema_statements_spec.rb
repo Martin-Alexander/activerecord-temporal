@@ -18,7 +18,12 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::SchemaStatements d
       expect(authors).to have_column(:name, :string)
       expect(authors).to have_column(:validity, :tstzrange, null: false)
       expect(authors).to have_column(:id, :integer, default_function: "nextval('authors_id_seq'::regclass)", null: false, sql_type: "bigint")
-      expect(authors).to have_column(:version, :integer, null: false, default: "1", sql_type: "bigint")
+
+      if ActiveRecord.version > Gem::Version.new("8.1.1")
+        expect(authors).to have_column(:version, :integer, null: false, default: 1, sql_type: "bigint")
+      else
+        expect(authors).to have_column(:version, :integer, null: false, default: "1", sql_type: "bigint")
+      end
       expect(authors.exclusion_constraints.sole).to have_attributes(
         expression: "id WITH =, validity WITH &&",
         options: hash_including(using: :gist)
