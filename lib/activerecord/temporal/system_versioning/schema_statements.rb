@@ -42,7 +42,7 @@ module ActiveRecord::Temporal
 
           drop_table(table_name, **options)
           drop_table(history_table_name, **options)
-          drop_versioning_hook(table_name, history_table_name, **options)
+          drop_versioning_hook(table_name, history_table_name, **options.slice(:columns, :primary_key, :if_exists))
         end
       end
 

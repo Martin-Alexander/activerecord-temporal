@@ -208,7 +208,7 @@ order.as_of(order.placed_at).products.first # => #<History::Product price: 50>
 products = Product
   .as_of(10.months.ago)
   .includes(line_items: :order)
-  .where(line_items: {quantity: 1})              # => [#<History::Product>, #<History::Product>]
+  .where(line_items: {quantity: 1})         # => [#<History::Product>, #<History::Product>]
 ```
 
 Records from time-travel queried are tagged with the time passed to `#as_of` and will propagate the time-travel query to subsequent associations.
