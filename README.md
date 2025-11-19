@@ -8,7 +8,7 @@ It provides both system versioning and application versioning. They can be used 
 
 As applications mature, changing business requirements become increasingly complicated by the need to handle historical data. You might need to:
 
-- Update subscriptions plans, but retain existing subscribers' original payment schedules
+- Update subscription plans, but retain existing subscribers' original payment schedules
 - Allow users to see information as it was before their view permission was revoked
 - Understand why generated financial reports have changed recently
 - Restore erroneously updated data
@@ -36,18 +36,29 @@ This can be a versioning strategy that operates automatically at the database le
 gem "activerecord-temporal"
 ```
 
-### Adding a System Versioned Table
+### Create a System Versioned Table
 
-This will create a regular `employees` table and an `employees_history` table that tracks all changes.
+Create your regular `employees` table. For the `employees_history` table, add the `system_period` column and include it in the table's primary key. `#create_versioning_hook` is what enables system versioning.
 
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
-  include ActiveRecord::Temporal::Migration
-
   def change
-    create_table :employees, system_versioning: true do |t|
-      t.integer :salary
+    enable_extension :btree_gist
+
+    create_table :employees do |t|
+      t.string :name
+      t.integer :wage
     end
+
+    create_table :employees_history, primary_key: [:id, :system_period] do |t|
+      t.bigserial :id, null: false
+      t.string :name
+      t.integer :wage
+      t.tstzrange :system_period, null: false
+      t.exclusion_constraint "id WITH =, system_period WITH &&", using: :gist
+    end
+
+    create_versioning_hook :employees, :employees_history
   end
 end
 ```
@@ -64,7 +75,7 @@ Include `ActiveRecord::Temporal` and enable system versioning.
 
 ```ruby
 class ApplicationRecord < ActiveRecord::Base
-  # [...]
+  primary_abstract_class
 
   include ActiveRecord::Temporal
 
@@ -83,262 +94,147 @@ end
 Manipulate data as normal and use the time-travel query interface to read data as it was at any time in the past.
 
 ```ruby
-Employee.create(salary: 75)            # Executed on 1999-12-31
-Employee.create(salary: 100)           # Executed on 2000-01-07
-Employee.last.update(salary: 200)      # Executed on 2000-01-14
-Employee.last.destroy                  # Executed on 2000-01-28
+Employee.create(name: "Sam", wage: 75)        # Executed on 1999-12-31
+bob = Employee.create(name: "Bob", wage: 100) # Executed on 2000-01-07
+bob.update(wage: 200)                         # Executed on 2000-01-14
+bob.destroy                                   # Executed on 2000-01-28
 
 Employee.history
 # => [
-#   #<History::Employee id: 1, salary: 75, system_period: 1999-12-31...2000-01-07>,
-#   #<History::Employee id: 2, salary: 100, system_period: 2000-01-07...2000-01-14>,
-#   #<History::Employee id: 2, salary: 200, system_period: 2000-01-14...2000-01-28>
+#   #<History::Employee id: 1, name: "Sam", wage: 75, system_period: 1999-12-31...>,
+#   #<History::Employee id: 2, name: "Bob", wage: 100, system_period: 2000-01-07...2000-01-14>,
+#   #<History::Employee id: 2, name: "Bob", wage: 200, system_period: 2000-01-14...2000-01-28>
 # ]
 
-Employee.as_of(Time.parse("2000-01-07"))
-# => [#<History::Employee id: 1, salary: 75, system_period: 1999-12-31...2000-01-07>]
+Employee.history.as_of(Time.parse("2000-01-10"))
+# => [
+    #<History::Employee id: 1, name: "Sam", wage: 75, system_period: 1999-12-31...>,
+    #<History::Employee id: 2, name: "Bob", wage: 100, system_period: 2000-01-07...2000-01-14>
+# ]
 ```
 
 #### Read more
- - [Time-travel Queries](#system-versioning)
+ - [Time-travel Queries Interface](#time-travel-queries-interface)
  - [System Versioning](#system-versioning)
- - [History Model Namespace](#system-versioning)
+ - [History Model Namespace](#history-model-namespace)
 
-### Application Versioning Overview
+### Create an Application Versioned Table
 
-- Uses a single table and has the application manage versioning using business-relevant points in time
-- Entities are versioned with `#revise`, `#inactivate`, and others.
-- Corrections can be made with `#update` and `#destroy`
-- Data migrations can be performed "in the future." New data will automatically become current at a set time without the need for coordination with releases or feature flags.
-
-Read more details [here](#application-versioning).
+Create an `employees` table with a `version` column in the primary key and a `tstzrange` column to be the time dimension.
 
 ```ruby
 class CreateEmployees < ActiveRecord::Migration[8.1]
   def change
+    enable_extension :btree_gist
+
     create_table :employees, primary_key: [:id, :version] do |t|
       t.bigserial :id, null: false
       t.bigint :version, null: false, default: 1
-      t.integer :salary
+      t.string :name
+      t.integer :wage
       t.tstzrange :validity, null: false
+      t.exclusion_constraint "id WITH =, validity WITH &&", using: :gist
     end
   end
 end
+```
 
+Include `ActiveRecord::Temporal` and enable application versioning for the column you're using as the time dimension.
+
+```ruby
 class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
 
   include ActiveRecord::Temporal
 
-  application_versioning dimension: :validity
+  application_versioning dimensions: :validity
 end
+```
 
+Call `application_versioned` on the model that is application versioned.
+
+```ruby
 class Employee < ActiveRecord::Base
   application_versioned
 end
+```
 
-time = Time.parse("2000-01-01")
+`::originate_at`, `#revise_at` and `#inactive_at` are the versioning equivalents of `::create`, `#update`, `#destroy`. `::original_at` and `#revision_at` are the non-saving variants.
 
-Employee.create(salary: 75, validity_start: time.next_month)
-Employee.create(salary: 100, validity_start: time.next_month)
+```ruby
+travel_to Time.parse("2000-01-01")
+
+Employee.originate_at(1.month.from_now).with(wage: 75)
+Employee.originate_at(1.month.from_now).with(wage: 100)
 employee = Employee.last
-new_version = employee.revise_at(3.months.from_now).with(salary: 200)
-new_version.inactive_at(time.next_year)
+new_version = employee.revise_at(2.months.from_now).with(wage: 200)
+new_version.inactive_at(1.year.from_now)
 
 Employee.all
 # => [
-#   #<Employee id: 1, version: 1, salary: 75, validity: 2000-02-01...>,
-#   #<Employee id: 2, version: 1, salary: 100, validity: 2000-02-01...2000-03-01>,
-#   #<Employee id: 2, version: 2, salary: 200, validity: 2000-03-01...2001-01-01>
+#   #<Employee id: 1, version: 1, wage: 75, validity: 2000-02-01...>,
+#   #<Employee id: 2, version: 1, wage: 100, validity: 2000-02-01...2000-03-01>,
+#   #<Employee id: 2, version: 2, wage: 200, validity: 2000-03-01...2001-01-01>
 # ]
+
+Employee.as_of(Time.parse("2000-02-15"))
+# => [
+#   #<Employee id: 1, version: 1, wage: 75, validity: 2000-02-01...>,
+#   #<Employee id: 2, version: 1, wage: 100, validity: 2000-02-01...2000-03-01>
+#]
 ```
 
-### Time-travel Queries Overview
+#### Read more
+ - [Time-travel Queries Interface](#time-travel-queries-interface)
+ - [Application Versioning](#application-versioning)
+ - [Foreign Key Constraints](#foreign-key-constraints)
 
-- Query the database as it existed at a given point in time using the `as_of` scope
-- The time constraint will apply to all joined/preloaded associations
-- Loaded records are tagged with the time used and propagate it to subsequent associations
-- Use scoped blocks to query at a given time by default
+### Make Time-travel Queries
 
-Read more details [here](#time-travel-queries).
+This interface works the same with system versioning and application. But this example assumes at least the `Product` and `Order` models are system versioned:
 
 ```ruby
-# Example using system versioning
-
-module History
-  include ActiveRecord::Temporal::HistoryModelNamespace
-end
-
-class ApplicationRecord < ActiveRecord::Base
-  primary_abstract_class
-  include ActiveRecord::Temporal::HistoryModels
-end
-
-class Product < ApplicationRecord
-  include ActiveRecord::Temporal::SystemVersioned
-  has_many :lines
-end
-
-class Line < ApplicationRecord
-  include ActiveRecord::Temporal::SystemVersioned
-  belongs_to :product
-end
-
-class Order < ApplicationRecord
-  include ActiveRecord::Temporal::SystemVersioned
-  has_many :lines
-  has_many :products, through: :lines
-end
-
 product = Product.create(price: 50)
 order = Order.create(placed_at: Time.current)
-order.lines.create(product: product)
+order.line_items.create(product: product)
 
 Product.first.update(price: 100)            # Product catalogue changed
 
 # Get the order's original price
 order = Order.first
-order.products.first                        # => #<History::Product price: 100>
+order.products.first                        # => #<Product price: 100>
 order.as_of(order.placed_at).products.first # => #<History::Product price: 50>
 
 products = Product
   .as_of(10.months.ago)
-  .includes(lines: :orders)
-  .where(lines: {quantity: 1})              # => [#<History::Product>, #<History::Product>]
+  .includes(line_items: :order)
+  .where(line_items: {quantity: 1})              # => [#<History::Product>, #<History::Product>]
+```
 
+Records from time-travel queried are tagged with the time passed to `#as_of` and will propagate the time-travel query to subsequent associations.
+
+```ruby
 products.first.categories.first             # => The product's category as it was 10 months ago
+```
 
-Temporal::ScopedQueries.at 1.year.ago do
+`temporal_scoping` implicitly sets all queries in the block to be as of the given time.
+
+```ruby
+include ActiveRecord::Temporal::Scoping
+
+temporal_scoping.at 1.year.ago do
   products = Product.all                    # => All products as of 1 year ago
-  products = Product.as_of(Time.current)    # Ignore scope's default time
+  products = Product.as_of(Time.current)    # Opt-in to ignore the scope's default time
 end
 ```
 
-## Installation
-
-```ruby
-# Gemfile
-
-gem "activerecord-temporal"
-```
-
-## Time-travel Queries
-
-Time-travel queries are agnostic towards the process by which records come to be versioned (if they are versioned at all). The only database requirement is that the table have a time range column (either `tsrange`, `tstzrange`, or `daterange`). Application versioning and system versioning are built on top of this feature.
-
-```ruby
-create_table :accounts do |t|
-  t.tstzrange :lifespan
-end
-
-class Account < ActiveRecord::Base
-  include ActiveRecord::Temporal::Querying
-
-  self.time_dimension = :lifespan
-end
-
-Account.create(lifespan: Time.parse("2030-01-01")...nil)
-Account.create(lifespan: Time.parse("2029-08-01")...Time.parse("2035-06-01"))
-
-Account.at_time(Time.parse("2036-03-15"))
-# SELECT accounts.* FROM accounts WHERE accounts.lifespan @> '2036-03-15 00:00:00'::timestamptz
-```
-
-The `at_time` scope is implemented as a simple `where` query that uses PostgreSQL's contain operation `@>` to efficiently filter rows.
-
-### Temporal Associations
-
-```ruby
-class Product < ActiveRecord::Base
-  include ActiveRecord::Temporal::Querying
-
-  self.time_dimension = :validity
-
-  has_many :prices, temporal: true
-end
-
-Product.as_of(Time.parse("2031-11-09")).includes(:prices).where("prices.amount > 100")
-# SELECT products.* FROM products
-# JOIN prices ON prices.product_id = products.id AND prices.validity @> '2031-11-09 00:00:00'::timestamptz
-# WHERE products.validity @> '2031-11-09 00:00:00'::timestamptz AND prices.amount > 100
-
-product = Product.as_of(Time.parse("2031-11-09")).find_by(sku: "prod_88fa9d")
-
-product.time_tag                        # => 2031-11-09, controls time scope propagation
-product.prices                          # => Associated prices as of 2031-11-09
-product.as_of(Time.parse("2029-01-01")) # => The same product as of 2029-01-01
-
-Product.first.prices                    # => Associated prices as of `Time.current`
-```
-
-Including `Temporal::Querying` adds a `temporal: true` option to association macros which interacts with the `as_of` scope to propagate temporal scopes to associations. In addition to filtering by time, the `as_of` scope tags all loaded records with given timestamp so that subsequent associations on them propagate the scope as well.
-
-- **`at_time`** is a simple scope equivalent to `where("validity @> ?::timestamptz", time)`
-- **`as_of`** applies `at_time`  to all temporal associations and tags all loaded records
-
-#### Pseudo-temporal Associations
-
-Models without the underlying time range column can still include `Temporal::Querying` and add `temporal: true` to their associations. Such "pseudo-temporal" associations will propagate temporal scopes, but will be unaffected by them (as if all their records have double unbounded time ranges equivalent to `nil...nil`).
-
-### Compatibility with Existing Scopes
-
-```ruby
-class Product < ActiveRecord::Base
-  include ActiveRecord::Temporal::Querying
-
-  self.time_dimension = :validity
-
-  has_one :price, -> { where(active: true) }, temporal: true
-end
-```
-
-Temporal associations are implemented as association scopes and will be merged with the association's non-temporal scope.
-
-### Block-scoped Default Time
-
-```ruby
-ActiveRecord::Temporal::ScopedQueries.at Time.parse("2011-04-30") do
-  Product.all                                 # => All products as of 2011-04-30
-  Product.find_by!(sku: "prod_88fa9d").prices # => All associated prices as of 2011-04-30
-  Product.as_of(Time.current)                 # => All current products
-
-  ActiveRecord::Temporal::ScopedQueries.at Time.parse("1990-06-07") do
-    Product.all                               # => All products as of 1990-06-07
-  end
-end
-```
-
-A block can be passed to `Temporal::ScopedQueries.at` to apply a default temporal scope to all queries made inside. It works similarly to Active Record's [`scoping`](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-scoping) class method.
-
-### Global Default Time
-
-```ruby
-class ApplicationController < ActionController::Base
-  around_action do |controller, action|
-    ActiveRecord::Temporal::ScopedQueries.at(Time.current, &action)
-  end
-end
-
-class ApplicationRecord < ActiveRecord::Base
-  include ActiveRecord::Temporal::Querying
-
-  self.time_dimension = :validity
-
-  default_scope -> { at_time(Time.current) }
-end
-```
-
-Although temporal associations are scoped to the current time by default, non-association queries (e.g., `Product.all`) are unscoped. If you typically only need current records, you can scope controller actions to `Time.current`, which roughly equates to the time when a request was received. Active Record's `default_scope` can also be used.
-
-So far, everything shown works with or without versioning.
+#### Read more
+ - [Time-travel Queries Interface](#time-travel-queries-interface)
+ - [Temporal Associations](#temporal-associations)
 
 ## System Versioning
 
-<!-- - Maintained by the database using PostgreSQL triggers and operates out of sight of Active Record
-- History tables can be easily added to existing tables to provide temporal features where needed
-- Version a subset of a table's columns if storage space is a concern -->
-
-The temporal model of this gem is based on the SQL specification. It's also roughly the same model used by RDMSs like [MarianaDB](https://mariadb.com/docs/server/reference/sql-structure/temporal-tables/system-versioned-tables) and [Microsoft SQL Server](https://learn.microsoft.com/en-us/sql/relational-databases/tables/temporal-tables?view=sql-server-ver17), and by the PostgreSQL extension [Temporal Tables Extension](https://github.com/arkhipov/temporal_tables) and its PL/pgSQL version [Temporal Tables](https://github.com/nearform/temporal_tables).
+The temporal model of this gem is based on the SQL specification. It's also roughly the same model used by RDMSs like [MariaDB](https://mariadb.com/docs/server/reference/sql-structure/temporal-tables/system-versioned-tables) and [Microsoft SQL Server](https://learn.microsoft.com/en-us/sql/relational-databases/tables/temporal-tables?view=sql-server-ver17). It's also used by the [Temporal Table](https://github.com/arkhipov/temporal_tables) PostgreSQL extension. The triggers used in this gem are inspired by [PL/pgSQL version of Temporal Tables](https://github.com/nearform/temporal_tables).
 
 Rows in the history table (or partition, view, etc.) represent rows that existed in the source table over a particular period of time. For PostgreSQL implementations this period of time is typically stored in a `tstzrange` column that this gem calls `system_period`.
 
@@ -424,270 +320,461 @@ DELETE FROM products WHERE id = 2
 └────┴───────────────┴───────┴───────────────────────────────────────────────┘*/
 ```
 
-<!--
-SELECT * FROM (
-  VALUES (1, 'Glow & Go Set', 29900), (2, 'Zepbound', 34900)
-) AS products(id, name, price);
-
-SELECT * FROM (VALUES
-  (1, 'Glow & Go Set', 29900, tsrange('2000-01-01', 'infinity')),
-  (2, 'Zepbound', 34900, tsrange('2000-01-01', 'infinity'))
-) AS products(id, name, price, system_period);
-
-SELECT * FROM (
-  VALUES (1, 'Glow & Go Set', 14900), (2, 'Zepbound', 34900)
-) AS products(id, name, price);
-
-SELECT * FROM (VALUES
-  (1, 'Glow & Go Set', 29900, tsrange('2000-01-01', '2000-01-02')),
-  (2, 'Zepbound', 34900, tsrange('2000-01-01', 'infinity')),
-  (1, 'Glow & Go Set', 14900, tsrange('2000-01-02', 'infinity')),
-) AS products(id, name, price, system_period);
-
-SELECT * FROM (
-  VALUES (1, 'Glow & Go Set', 14900)
-) AS products(id, name, price);
-
-SELECT * FROM (VALUES
-  (1, 'Glow & Go Set', 29900, tsrange('2000-01-01', '2000-01-02')),
-  (2, 'Zepbound', 34900, tsrange('2000-01-01', '2000-01-03')),
-  (1, 'Glow & Go Set', 14900, tsrange('2000-01-02', 'infinity')),
-) AS products(id, name, price, system_period);
--->
-
-### Create a History Table
-
-Using `Temporal::SchemaStatements` adds the `system_versioning` option to `create_table`. This will automatically create a matching history table and the PostgreSQL triggers.
+### Schema Migrations
 
 ```ruby
-class CreateProducts < ActiveRecord::Base
-  include ActiveRecord::Temporal::Migration
-
+class CreateProducts < ActiveRecord::Migration[8.1]
   def change
-    create_table :products, system_versioning: true do |t|
-      t.string :sku, null: false
-      t.string :name
-      t.references :price, null: false, foreign_key: true
-    end
-  end
-end
-```
+    enable_extension :btree_gist
 
-The `system_versioning: true` option will create a history table that:
-- Has `tstzrange` columns called `system_period`
-- Has a composite primary key composed of the source table's primary key and `system_period`
-- Includes all columns names and types from the source table
-- Excludes all foreign key and uniqueness constraints
-- Calls `create_versioning_hook` to connect the source and history table
-
-The code above is equivalent to:
-
-```ruby
-class CreateProducts < ActiveRecord::Base
-  def change
     create_table :products do |t|
-      t.string :sku, null: false
-      t.string :name
-      t.references :price, null: false, foreign_key: true
+      t.string :name, null: false
+      t.index :sku, unique: true
+      t.integer :price
     end
 
     create_table :products_history, primary_key: [:id, :system_period] do |t|
       t.bigint :id, null: false
-      t.string :sku, null: false
       t.string :name
-      t.references :price, null: false
+      t.integer :price
       t.tstzrange :system_period, null: false
+      t.exclusion_constraint "id WITH =, system_period WITH &&", using: :gist
     end
 
-    create_versioning_hook :products, :products_history
+    create_versioning_hook :products,           # Enables system versioning for all columns
+      :products_history                         # in the source table
+
+    create_versioning_hook :products,           # But the history table doesn't track `sku` so
+      :products_history,                        # we need explicitly set the columns to
+      columns: [:id, :name, :price]             # exclude it
+
+    add_column :products_history, :sku, :string # We can add `sku` to the history table later
+
+    change_versioning_hook :products,           # And update the triggers to start tracking it
+      :products_history,
+      add_columns: [:sku]
+
+    change_versioning_hook :products,           # Keep the `name` column, but stop tracking it
+      :products_history,
+      remove_columns: [:name]
+
+    drop_versioning_hook :products,             # Keep the table, but disable system versioning
+      :products_history
+
+    drop_versioning_hook :products,             # Include options to make it reversible
+      :products_history,
+      columns: [:id, :sku, :price]
+
+    drop_table :products_history                # Drop history table like any other table
+
+    create_versioning_hook :products,           # If the products table used something other
+      :products_history,                        # than `id` for the primary key
+      columns: [:id, :name, :price]
+      primary_key: [:uuid]
   end
 end
 ```
 
-The key to system versioning is the `create_versioning_hook` method. It creates three sets of PostgreSQL triggers and PL/pgSQL functions that watch for `INSERT`, `UPDATE`, and `DELETE` actions on the source table and update the history table accordingly. PostgreSQL triggers share the same transaction as the statement that triggered them and are thus atomic.
+The only strict requirements for a history table are:
+1. It must have a `tstzrange` column called `system_period`
+2. Its primary key must contain all primary key columns of the source table plus `system_period`
+3. All columns shared by the two tables must have the same type
 
-The simplest of these triggers is the `INSERT` trigger and it looks like this:
+Very likely though you'll also want to make sure that it doesn't have any unique indexes or non-temporal foreign key constraints.
 
-```pgsql
-CREATE FUNCTION public.sys_ver_fn_7722e802d8() RETURNS trigger LANGUAGE plpgsql AS $$
-  BEGIN
-    INSERT INTO "products_history" ("id", "sku", "name", "price_id", system_period)
-    VALUES (NEW."id", NEW."sku", NEW."name", NEW."price_id", tstzrange(NOW(), 'infinity'));
+Enabling the `btree_gist` extension allows you to use an efficient exclusion constraint to prevent records with the same ID from having overlapping `system_period` columns.
 
-    RETURN NULL;
-  END;
-$$;
+`#create_versioning_hook` enables system versioning by creating three triggers that automatically updating the history table whenever the source table changes.
 
-CREATE TRIGGER sys_ver_insert_trigger AFTER INSERT ON public.products
-FOR EACH ROW EXECUTE FUNCTION public.sys_ver_fn_7722e802d8();
-```
+### History Model Namespace
 
-Note that `NOW()` gets the time from the start of the current transaction. So all changes to the source table made in one transaction will use the same timestamp.
-
-### Foreign Key Constraints
-
-Given an existing source table, the requirements for a history table are:
-1. A composite primary key made up of a column matching a unique column (or set of columns) in the source table (usually just `id`) and `system_period` of the type `tstzrange`
-2. No columns that share a name with columns in the source table but have a different type (e.g., `id INTEGER` and `id BIGINT`)
-
-There are other restrictions on history tables that fall into the category of things that are conceptually incompatible with history tables. This would be things like unique constraints on columns used to track changes or triggers that update other versioned tables. Most of these should be pretty obvious and are not part of Active Record's DDL DSL anyways.
-
-Foreign key constraints to other history tables (e.g., between `history_products` and `history_prices`) can only be used with the `WITHOUT OVERLAPS`/`PERIOD` feature added in PostgreSQL 18. Otherwise custom triggers are needed to achieve the same effect.
-
-Foreign key constraints are discussed further below.
-
-### Active Record Models
-
-```ruby
-class Product < ActiveRecord::Base
-  belongs_to :price
-end
-
-class HistoryProduct < Product
-  include ActiveRecord::Temporal::SystemVersioned
-end
-
-HistoryProduct.primary_key            # => ["id", "system_period"]
-HistoryProduct.table_name             # => "products_history", detected from SQL comment on triggers
-
-time = Time.parse("2027-12-23")
-
-products = HistoryProduct.as_of(time) # => Products as of 2027-12-23
-products.first.price                  # => Inherited associations are temporal by default
-
-HistoryProduct.sti_name               # => "Product", compatible with single-table inheritance
-HistoryProduct.time_dimension         # => ["system_period"]
-```
-
-Regular Active Record models can be used for history tables without any help from this gem. But to create a temporal version of the source model just inherit from it and include `Temporal::SystemVersioned`. This module automatically includes `Temporal::Querying`, adds `temporal: true` to the inherited associations, and ensures that single-table inheritance is properly supported.
-
-### Models not Backed by a History Table
+System versioning works by creating a parallel hierarchy of history models for your regular models. This applies to all models in the hierarchy whether they're system versioned or not and allows you to make queries that join multiple tables.
 
 ```ruby
 class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
+
+  include ActiveRecord::Temporal
+
+  system_versioning
 end
 
+# ✅ System versioned
 class Product < ApplicationRecord
-  belongs_to :price
+  system_versioned
+
+  has_many :line_items
 end
 
-class Price < ApplicationRecord
-  has_many :products
+# ❌ Not system versioned
+class LineItem < ApplicationRecord
+  belongs_to :product
 end
 
-Product.table_name                 # => "products"
-Price.table_name                   # => "prices"
-
-table_exists?("products_history")  # => true
-table_exists?("prices_history")    # => false
-
-class HistoryProduct < Product
-  include Temporal::SystemVersioned
+module History
+  include Temporal::SystemVersioningNamespace
 end
 
-class HistoryPrice < Price
-  include Temporal::SystemVersioned
-end
+History::Product                   # => History::Product(id: integer, system_period: tstzrange, name: string)
+History::LineItem                  # => History::LineItem(id: integer, product_id: integer, order_id: integer)
 
-HistoryProduct.table_name          # => "products_history"
-HistoryPrice.table_name            # => "prices"
+History::Product.table_name        # => "products_history"
+History::LineItem.table_name       # => "line_items"
+
+History::Product.primary_key       # => ["id", "system_period"]
+History::LineItem.primary_key      # => "id"
+
+Product.history                    # [History::Product, ...]
+LineItem.history                   # [LineItem::Product, ...]
+
+products = Product.history.as_of(Time.parse("2027-12-23"))
+product = products.first           # => #<History::Product id: 70, system_period: 2027-11-07...2027-12-28, name: "Toy">
+product.name                       # => "Toy"
+product.line_items                 # => []
+
+products = Product.history.as_of(Time.parse("2028-01-03"))
+product = products.first           # => #<History::Product id: 1, system_period: 2027-12-28..., name: "Toy (NEW!)">
+product.name                       # => "Toy (NEW!)"
+product.line_items                 # => [#<History::LineItem id: 1, product_id: 70, order_id: 4>]
 ```
 
-In the same way that `Temporal::Querying` can be included in models that don't have a time range column, the `Temporal::SystemVersioned` module can be included in models that aren't backed by a history table. They will still have their inherited associations temporalized, but as their table lacks the time range column their associations will be "pseudo-temporal" (i.e., they will propagate time scopes, but not be affected by them).
+By default, calling `system_versioning` will look for a namespace called `History`. But this can be configured.
 
-This comes in handy when using the system versioning namespace to perform this process for all of your Active Record models automatically.
+```ruby
+module Versions
+  include Temporal::SystemVersioningNamespace
+end
 
-### System Versioning Model Namespace
+class ApplicationRecord < ActiveRecord::Base
+  primary_abstract_class
+
+  include ActiveRecord::Temporal
+
+  system_versioning
+
+  def self.history_model_namespace
+    Versions
+  end
+end
+```
+
+By default, the namespace will only provide history models for models in the root namespace that descend from the root model where `system_versioning` was called (`ApplicationRecord` in this case).
 
 ```ruby
 module History
   include Temporal::SystemVersioningNamespace
 
-  base ApplicationRecord
+  namespace "Tenant"
+
+  namespace "Backend" do
+    namespace "Admin"
+  end
 end
 
-History::Product                   # => History::Product(id: integer, system_period: tstzrange, name: string, sku: string)
-History::Price                     # => History::Price(id: integer, amount: integer)
-
-History::Product.table_name        # => "products_history"
-History::Price.table_name          # => "prices"
-
-History::Product.primary_key       # => ["id", "system_period"]
-History::Price.primary_key         # => "id"
-
-products = History::Product.as_of(Time.parse("2027-12-23"))
-product = products.first           # => #<History::Product id: 1, system_period: 2027-11-07...2027-12-28, name: "Toy", sku: "prod_88fa9d">
-product.name                       # => "Toy"
-product.price                      # => #<History::Price id: 1, amount: 100>
-
-products = History::Product.as_of(Time.parse("2028-01-03"))
-product = products.first           # => #<History::Product id: 1, system_period: 2027-12-28..., name: "Toy (NEW!)", sku: "prod_88fa9d">
-product.name                       # => "Toy (NEW!)"
-product.price                      # => #<History::Price id: 2, amount: 125>
+Tenant::Product.history          # => [History::Tenant::Product, ...]
+Backend::Config.history          # => [History::Backend::Config, ...]
+Backend::Admin::Customer.history # => [History::Backend::Admin::Customer, ...]
 ```
-
-Including the `Temporal::SystemVersioningNamespace` effectively create a hierarchy of system versioned models that mirrors the hierarchy specified with the `base` method. Associations in these models will point to other models in the namespace (if they exist, otherwise they'll point to original model).
-
-This means that even if only one table is system versioned ("products", in this example), important time-travel queries that join non-versioned tables can still be made using existing Active Record associations.
-
-```ruby
-order = Order.find_by(id: 1721)
-
-# Select products included in an order as they were at the time the order was placed
-History::Product
-  .as_of(order.placed_at)
-  .joins(:order_line_items)
-  .where(order_line_items: {order_id: order.id})
-
-# SELECT products_history.* FROM products_history
-# JOIN order_line_items ON order_line_items.product_id = products_history.id
-# WHERE products_history.system_period @> '2027-11-07 00:00:00'::timestamptz
-#   AND order_line_items.order_id = 1721
-```
-
-### Schema Migrations
-
-```ruby
-create_table :products, primary_key: :entity_id do |t|
-  t.string :sku, null: false
-  t.string :name, null: false
-  t.references :price, null: false, foreign_key: true
-end
-
-create_table :products_history, primary_key: [:entity_id, :system_period] do |t|
-  t.bigint :entity_id, null: false
-  t.string :name, null: false
-  t.references :price, null: false
-  t.tstzrange :system_period, null: false
-end
-
-create_versioning_hook :products,
-  :products_history,
-  columns: [:entity_id, :name],             # Exclude the sku from system versioning
-  primary_key: [:entity_id]                 # Defaults to `id`, but products uses `entity_id`
-
-add_column :products_history, :sku, :string # Add it later if you change your mind
-
-change_versioning_hook :products,           # And update the triggers to start tracking it
-  :products_history,
-  add_columns: [:sku]
-
-change_versioning_hook :products,           # Keep the name column, but stop tracking it
-  :products_history,
-  remove_columns: [:name]
-
-drop_versioning_hook :products,             # Keep the table, but disable system versioning
-  :products_history
-
-drop_versioning_hook :products,             # Or specify the state of the hook when dropping
-  :products_history,                        # it in order to make the migration reversible
-  columns: [:entity_id, :sku],
-  primary_key: [:entity_id]
-
-drop_table :products_history                # Drop history table like any other table
-```
-
-The behaviour of the database triggers can be changed alongside other changes to the database's schema. The methods `create_versioning_hook`, `drop_versioning_hook`, and `change_versioning_hook` use SQL comments on the functions to expose their current state to the migration methods. Otherwise, if you removed these comments, you'd have to drop and fully respecify the hook on every change.
 
 ## Application Versioning
+
+```ruby
+class CreateEmployees < ActiveRecord::Migration[8.1]
+  def change
+    enable_extension :btree_gist
+
+    create_table :employees, primary_key: [:id, :version] do |t|
+      t.bigserial :id, null: false
+      t.bigint :version, null: false, default: 1
+      t.string :name
+      t.integer :price
+      t.tstzrange :validity, null: false
+      t.exclusion_constraint "id WITH =, validity WITH &&", using: :gist
+    end
+  end
+end
+
+class ApplicationRecord < ActiveRecord::Base
+  primary_abstract_class
+
+  include ActiveRecord::Temporal
+
+  application_versioning dimensions: :validity
+end
+
+class Product < ApplicationRecord
+  application_versioned
+end
+```
+
+The only strict requirements for a application versioned table are:
+1. It must have a `tstzrange` column (name doesn't matter)
+2. It must have a numeric `version` column with a default value
+
+The `version` column will be automatically incremented when creating new versions in `#after_initialize_revision`.
+
+This method can be defined in the model to for additional behaviour. Don't forget to call `super`.
+
+```ruby
+class Product < ApplicationRecord
+  application_versioned
+
+  def after_initialize_revision(prev_version)
+    super
+
+    # Some custom post-initialization logic
+  end
+end
+```
+
+### Versioning Interface
+
+`::original_at` instantiates a first version at the given time.
+
+`::originate_at` does the same, but also saves it.
+
+```ruby
+travel_to Time.parse("2000-01-01") # Lock `Time.current` at 2000-01-01
+
+prod_v1 = Product.original_at(1.year.from_now).with(price: 100)
+# => #<Product id: nil, version: 1, price: 100, validity: 2001-01-01...>
+
+prod_v1.persisted? # => false
+
+prod_v1 = Product.originate_at(1.year.from_now).with(price: 100)
+# => #<Product id: 1, version: 1, price: 55, validity: 2001-01-01...>
+
+prod_v1.persisted? # => true
+```
+
+`#revision_at` instantiates the next version of a record at the given time.
+
+```ruby
+prod_v2 = prod_v1.revision_at(2.years.from_now).with(price: 250)
+# => #<Product id: 1, version: 2, price: 250, validity: 2002-01-01...>
+
+prod_v1
+# => #<Product id: 1, version: 1, price: 100, validity: 2001-01-01...2001-01-01>
+
+prod_v1.save # => true
+prod_v2.save # => true
+```
+
+`#revise_at` does the same thing, but also saves it.
+
+```ruby
+prod_v3 = prod_v2.revise_at(3.years.from_now).with(price: 500)
+# => #<Product id: 1, version: 3, price: 500, validity: 2003-01-01...>
+
+prod_v2
+# => #<Product id: 1, version: 2, price: 250, validity: 2002-01-01...2003-01-01>
+
+prod_v2.persisted? # => true
+prod_v3.persisted? # => true
+```
+
+`#inactive_at` closes the record's time dimension at the given time, making it the last version.
+
+```ruby
+prod_v3.inactivate_at(4.years.from_now)
+# => #<Product id: 1, version: 3, price: 500, validity: 2003-01-01...2004-01-01>
+```
+
+All the above methods have a counterpart without `_at` that default to the current time or the time of enclosing scoped block.
+
+```ruby
+travel_to Time.parse("2030-01-01") # Lock `Time.current` at 2030-01-01
+
+prod_v1 = Product.find_by(id: 1, version: 1)
+
+prod_v2 = prod_v1.revise.with(price: 1000)
+# => #<Product id: 1, version: 2, price: 1000, validity: 2030-01-01...>
+
+include ActiveRecord::Temporal::Scoping
+
+temporal_scoping.at 5.years.from_now do
+  prod_v2.inactivate
+end
+# => #<Product id: 1, version: 2, price: 1000, validity: 2030-01-01...2035-01-01>
+```
+
+## Time-Travel Queries Interface
+
+The time-travel query interface behaves the same for application and system versioned models.
+
+`at_time` is an Active Record scope that filters rows by time. It applies to the base model as well as all preloaded/joined associations. 
+
+```ruby
+Product.at_time(Time.parse("2025-01-01"))
+```
+```sql
+SELECT products.* FROM products WHERE products.validity @> '2025-01-01 00:00:00'::timestamptz
+```
+
+```ruby
+Product.at_time(Time.parse("2025-01-01"))
+  .includes(line_items: :order)
+  .where(orders: {status: "shipped"})
+```
+```sql
+SELECT products.* FROM products
+JOIN line_items ON line_items.product_id = products.id
+  AND line_items.validity @> '2025-01-01 00:00:00'::timestamptz
+JOIN orders ON orders.id = line_items.order_id
+  AND orders.validity @> '2025-01-01 00:00:00'::timestamptz
+WHERE products.validity @> '2025-01-01 00:00:00'::timestamptz AND orders.status = 'shipped'
+```
+
+`as_of` is another Active Record scope. It applies the same filtering behaviour as `at_time` but also tags all loaded records with the time used such that any subsequent associations called on them will propagate the `as_of` scope.
+
+```ruby
+product = Product.as_of(Time.parse("2025-01-01")).first
+# => #<Product id: 1, version: 2, price: 1000, validity: 2030-01-01...>
+
+product.time_tag               # => 2025-01-01
+
+product.line_items.first.order # => Order as it was at 2025-01-01
+```
+
+`#as_of(time)` returns a new instance of a record at the given time. Returns nil if record does not exist at that time.
+
+`#as_of!(time)` reloads the record to the version at the given time. Raises error if record does not exist at that time.
+
+```ruby
+product = Product.first
+
+product.time_tag               # => nil
+product.line_items             # => [LineItem] as they are now
+
+product.as_of!(Time.parse("2025-01-01"))
+
+product.time_tag               # => 2025-01-01
+product.line_items             # => [LineItem] as they were at 2025-01-01
+```
+
+The time-travel query interface doesn't require any type of versioning at all. As long as a model has a `tstzrange` column, includes `ActiveRecord::Temporal::Querying` and declares the time dimension.
+
+```ruby
+create_table :employees do |t|
+  t.tstzrange :effective_period
+end
+
+class Employee < ActiveRecord::Base
+  include ActiveRecord::Temporal::Querying
+
+  self.time_dimensions = :effective_period
+end
+
+Employee.as_of(Time.current) # => [Employee, Employee]
+```
+
+### Scoped Blocks
+
+Inside of a time-scoped block all query will by default have the `at_time` scope applied. It can be overwritten.
+
+```ruby
+include ActiveRecord::Temporal::Scoping
+
+temporal_scoping.at Time.parse("2011-04-30") do
+  Product.all                     # => All products as of 2011-04-30
+  Product.first.prices            # => All associated prices as of 2011-04-30
+  Product.as_of(Time.current)     # => All current products
+
+  temporal_scoping.at Time.parse("1990-06-07") do
+    Product.all                   # => All products as of 1990-06-07
+  end
+end
+```
+
+### Temporal Associations
+
+For `at_time` and `as_of` to filter associated models the associations between models must be passed the `temporal: true` option.
+
+```ruby
+class Product < ApplicationRecord
+  application_versioned
+
+  has_many :line_items
+  has_many :orders, through: :line_items
+end
+```
+
+By default, this query will filter products by the time, but not the line items or orders.
+
+```ruby
+Product.at_time(Time.parse("2025-01-01"))
+  .includes(line_items: :order)
+  .where(orders: {status: "shipped"})
+```
+
+You must add `temporal: true` to the associations. Then the entire query will be temporal.
+
+```ruby
+class Product < ApplicationRecord
+  application_versioned
+
+  has_many :line_items, temporal: true
+  has_many :orders, through: :line_items, temporal: true
+end
+```
+
+Associated models do not need to be application versioned or system versioned to use temporal associations. If they're used in a query with `at_time` or `as_of` they will behave as though all their rows have double unbounded time ranges equivalent to `nil...nil` in Ruby or `['-infinity','infinity')` PostgreSQL.
+
+The history models automatically generated when using system versioning will automatically have all their associations temporalized whether they're backed by a history table or not.
+
+#### Interaction with Scoped Blocks
+
+By their nature, temporal associations will always filter associated records by the current time or the time of the scoped block.
+
+```ruby
+Product.all             # => All product versions, past, present, and future
+LineItem.first.products # => associated products scoped to the current time
+```
+
+If you typically only need current records, you can scope controller actions to `Time.current`, which roughly equates to the time when a request was received.
+
+```ruby
+class ApplicationController < ActionController::Base
+  include ActiveRecord::Temporal::Scoping
+
+  around_action do |controller, action|
+    temporal_scoping.at(Time.current, &action)
+  end
+end
+```
+
+`default_scope` can also be used to achieve a similar effect.
+
+```ruby
+class ApplicationRecord < ActiveRecord::Base
+  include ActiveRecord::Temporal
+
+  application_versioned
+
+  self.time_dimensions = :validity
+
+  default_scope -> { at_time(Time.current) }
+end
+```
+
+#### Compatibility with Existing Scopes
+
+```ruby
+class Product < ActiveRecord::Base
+  application_versioned
+
+  has_one :price, -> { where(active: true) }, temporal: true
+end
+```
+
+Temporal associations are implemented as association scopes and will be merged with the association's non-temporal scope.
+
+## Foreign Key Constraints
+
+Active Record models typically have a single column primary key called `id`. History tables must have a composite primary key, and though not a requirement it's recommended that application versioned tables do as well.
+
+Furthermore, you probably don't want foreign key constraints to reference a single row in a versioned table. A book should belong to an author, not a specific version of that author. But standard foreign key constraints must reference columns that uniquely identify a row.
+
+There are two options to get around this:
+1. Use the `WITHOUT OVERLAPS`/`PERIOD` feature added in PostgreSQL 18 that allows for temporal foreign key constraints
+2. Implement effective foreign key constraints using triggers
