@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.platform = Gem::Platform::RUBY
   s.name = "activerecord-temporal"
-  s.version = "0.1.0"
+  s.version = "0.2.0"
   s.summary = "Time-travel querying, application/system versioning, and bitemporal support for Active Record"
   s.description = "An unobtrusive and modular plugin for Active Record that adds support for time-travel querying and data versioning at the application level, at the system level via PostgreSQL triggers, or both."
 

@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.2.0] - 2025-11-19
+
+- Added ambient/global time scopes
+- Added history model namespace
+- Added class methods for originating versions with application versioning
+- A lot of bug fixes
+- Changed the public interface to improve convenience
+
 ## [0.1.0] - 2025-11-11
 
 - Initial release
