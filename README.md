@@ -412,7 +412,7 @@ class LineItem < ApplicationRecord
 end
 
 module History
-  include Temporal::SystemVersioningNamespace
+  include ActiveRecord::Temporal::HistoryModelNamespace
 end
 
 History::Product                   # => History::Product(id: integer, system_period: tstzrange, name: string)
@@ -442,7 +442,7 @@ By default, calling `system_versioning` will look for a namespace called `Histor
 
 ```ruby
 module Versions
-  include Temporal::SystemVersioningNamespace
+  include ActiveRecord::Temporal::HistoryModelNamespace
 end
 
 class ApplicationRecord < ActiveRecord::Base
@@ -462,7 +462,7 @@ By default, the namespace will only provide history models for models in the roo
 
 ```ruby
 module History
-  include Temporal::SystemVersioningNamespace
+  include ActiveRecord::Temporal::HistoryModelNamespace
 
   namespace "Tenant"
 
