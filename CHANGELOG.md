@@ -2,6 +2,7 @@
 
 - Application versioning: Raise `ClosedRevisionError` when trying to revise or inactive closed versions.
 - System versioning: Store gem version in versioning hooks
+- System versioning: Add asserting for matching primary key on versioning hook creation
 
 ## [0.2.0] - 2025-11-19
 

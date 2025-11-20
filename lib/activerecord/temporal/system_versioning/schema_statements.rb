@@ -19,10 +19,11 @@ module ActiveRecord::Temporal
           primary_key
         end
 
-        ensure_table_exists!(source_table)
-        ensure_table_exists!(history_table)
-        ensure_columns_match!(source_table, history_table, column_names)
-        ensure_columns_exists!(source_table, Array(primary_key))
+        assert_table_exists!(source_table)
+        assert_table_exists!(history_table)
+        assert_columns_match!(source_table, history_table, column_names)
+        assert_columns_exists!(source_table, Array(primary_key))
+        assert_primary_key_matches!(source_table, Array(primary_key))
 
         schema_creation = SchemaCreation.new(self)
 
@@ -83,13 +84,13 @@ module ActiveRecord::Temporal
         add_columns = (options[:add_columns] || []).map(&:to_s)
         remove_columns = (options[:remove_columns] || []).map(&:to_s)
 
-        ensure_table_exists!(source_table)
-        ensure_table_exists!(history_table)
-        ensure_columns_match!(source_table, history_table, add_columns)
+        assert_table_exists!(source_table)
+        assert_table_exists!(history_table)
+        assert_columns_match!(source_table, history_table, add_columns)
 
         hook_definition = versioning_hook(source_table)
 
-        ensure_hook_has_columns!(hook_definition, remove_columns)
+        assert_hook_has_columns!(hook_definition, remove_columns)
 
         drop_versioning_hook(source_table, history_table)
 
@@ -119,15 +120,15 @@ module ActiveRecord::Temporal
       def validate_create_versioning_hook_options!(options)
       end
 
-      def ensure_table_exists!(table_name)
+      def assert_table_exists!(table_name)
         return if table_exists?(table_name)
 
         raise ArgumentError, "table '#{table_name}' does not exist"
       end
 
-      def ensure_columns_match!(source_table, history_table, column_names)
-        ensure_columns_exists!(source_table, column_names)
-        ensure_columns_exists!(history_table, column_names)
+      def assert_columns_match!(source_table, history_table, column_names)
+        assert_columns_exists!(source_table, column_names)
+        assert_columns_exists!(history_table, column_names)
 
         column_names.each do |column|
           source_column = columns(source_table).find { _1.name == column }
@@ -139,7 +140,7 @@ module ActiveRecord::Temporal
         end
       end
 
-      def ensure_columns_exists!(table_name, column_names)
+      def assert_columns_exists!(table_name, column_names)
         column_names.each do |column|
           next if column_exists?(table_name, column)
 
@@ -147,7 +148,14 @@ module ActiveRecord::Temporal
         end
       end
 
-      def ensure_hook_has_columns!(hook, column_names)
+      def assert_primary_key_matches!(source_table, primary_key)
+        primary_key = primary_key&.map(&:to_s)
+        unless Array(primary_key(source_table)) == primary_key
+          raise ArgumentError, "table '#{source_table}' does not have primary key #{primary_key}"
+        end
+      end
+
+      def assert_hook_has_columns!(hook, column_names)
         column_names.each do |column_name|
           next if hook.columns.include?(column_name)
 

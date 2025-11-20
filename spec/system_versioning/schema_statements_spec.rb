@@ -71,18 +71,30 @@ RSpec.describe SystemVersioning::SchemaStatements do
     end
 
     it "creates hook with custom primary key" do
+      conn.create_table :cakes, primary_key: [:foo, :bar] do |t|
+        t.string :foo
+        t.string :bar
+        t.string :baz
+      end
+
+      conn.create_table :cakes_history, primary_key: [:foo, :bar, :sys_period] do |t|
+        t.string :foo
+        t.string :bar
+        t.string :baz
+        t.tstzrange :sys_period, null: false
+      end
+
       conn.create_versioning_hook(
-        :authors,
-        :authors_history,
-        columns: [:id, :first_name, :last_name],
-        primary_key: [:id, :first_name, :last_name]
+        :cakes,
+        :cakes_history,
+        primary_key: [:foo, :bar]
       )
 
-      expect(conn.versioning_hook(:authors)).to have_attributes(
-        source_table: "authors",
-        history_table: "authors_history",
-        columns: %w[id first_name last_name],
-        primary_key: %w[id first_name last_name]
+      expect(conn.versioning_hook(:cakes)).to have_attributes(
+        source_table: "cakes",
+        history_table: "cakes_history",
+        columns: %w[foo bar baz],
+        primary_key: %w[foo bar]
       )
     end
 
@@ -147,6 +159,12 @@ RSpec.describe SystemVersioning::SchemaStatements do
           primary_key: :name
         )
       end.to raise_error(ArgumentError, "table 'authors' does not have column 'name'")
+    end
+
+    it "raises an error if the primary key doesn't match the source table primary key" do
+      expect do
+        conn.create_versioning_hook :books, :books_history, columns: [:id, :name]
+      end.to raise_error(ArgumentError, "table 'books' does not have primary key [\"id\"]")
     end
 
     it "raises an error if the hook already exists" do
