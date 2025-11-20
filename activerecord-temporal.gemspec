@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
 
   s.metadata = {
     "bug_tracker_uri" => "https://github.com/Martin-Alexander/activerecord-temporal/issues",
-    "changelog_uri" => "https://github.com/Martin-Alexander/activerecord-temporal/CHANGELOG.md",
+    "changelog_uri" => "https://github.com/Martin-Alexander/activerecord-temporal/blob/master/CHANGELOG.md",
     "homepage_uri" => s.homepage,
     "source_code_uri" => "https://github.com/Martin-Alexander/activerecord-temporal"
   }
