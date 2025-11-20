@@ -1,51 +1,6 @@
 module ActiveRecord::Temporal
   module SystemVersioning
     module SchemaStatements
-      def create_table_with_system_versioning(table_name, **options, &block)
-        create_table(table_name, **options, &block)
-
-        source_pk = Array(primary_key(table_name))
-        history_options = options.merge(primary_key: source_pk + ["system_period"])
-
-        exclusion_constraint_expression = source_pk.map do |col|
-          "#{col} WITH ="
-        end.join(", ") + ", system_period WITH &&"
-
-        create_table("#{table_name}_history", **history_options) do |t|
-          columns(table_name).each do |column|
-            t.send(
-              column.type,
-              column.name,
-              comment: column.comment,
-              collation: column.collation,
-              default: nil,
-              limit: column.limit,
-              null: column.null,
-              precision: column.precision,
-              scale: column.scale
-            )
-          end
-
-          t.tstzrange :system_period, null: false
-          t.exclusion_constraint exclusion_constraint_expression, using: :gist
-        end
-
-        create_versioning_hook table_name,
-          "#{table_name}_history",
-          columns: :all,
-          primary_key: source_pk
-      end
-
-      def drop_table_with_system_versioning(*table_names, **options)
-        table_names.each do |table_name|
-          history_table_name = "#{table_name}_history"
-
-          drop_table(table_name, **options)
-          drop_table(history_table_name, **options)
-          drop_versioning_hook(table_name, history_table_name, **options.slice(:columns, :primary_key, :if_exists))
-        end
-      end
-
       def create_versioning_hook(source_table, history_table, **options)
         options.assert_valid_keys(:columns, :primary_key)
 

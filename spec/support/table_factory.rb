@@ -22,14 +22,69 @@ module ActiveRecordTemporalTests
       end
     end
 
-    def system_versioned_table(name, **options, &block)
+    def system_versioned_table(table_name, **options, &block)
       conn.enable_extension(:btree_gist)
 
-      conn.create_table_with_system_versioning name, **options, &block
+      conn.create_table(table_name, **options, &block)
+
+      source_pk = Array(conn.primary_key(table_name))
+      history_options = options.merge(primary_key: source_pk + ["system_period"])
+
+      exclusion_constraint_expression = source_pk.map do |col|
+        "#{col} WITH ="
+      end.join(", ") + ", system_period WITH &&"
+
+      conn.create_table("#{table_name}_history", **history_options) do |t|
+        conn.columns(table_name).each do |column|
+          t.send(
+            column.type,
+            column.name,
+            comment: column.comment,
+            collation: column.collation,
+            default: nil,
+            limit: column.limit,
+            null: column.null,
+            precision: column.precision,
+            scale: column.scale
+          )
+        end
+
+        t.tstzrange :system_period, null: false
+        t.exclusion_constraint exclusion_constraint_expression, using: :gist
+      end
+
+      conn.create_versioning_hook table_name,
+        "#{table_name}_history",
+        columns: :all,
+        primary_key: source_pk
     end
 
-    def application_versioned_table(name, **options, &block)
-      conn.create_application_versioned_table name, **options, &block
+    def application_versioned_table(table_name, **options, &block)
+      pk_option = options[:primary_key]
+
+      primary_key = if options[:primary_key]
+        Array(options[:primary_key]) | [:version]
+      else
+        [:id, :version]
+      end
+
+      exclusion_constraint_expression = (primary_key - [:version]).map do |col|
+        "#{col} WITH ="
+      end.join(", ") + ", validity WITH &&"
+
+      options = options.merge(primary_key: primary_key)
+
+      conn.create_table(table_name, **options) do |t|
+        unless pk_option.is_a?(Array)
+          t.bigserial pk_option || :id, null: false
+        end
+
+        t.bigint :version, null: false, default: 1
+        t.tstzrange :validity, null: false
+        t.exclusion_constraint exclusion_constraint_expression, using: :gist
+
+        instance_exec(t, &block)
+      end
     end
 
     private
