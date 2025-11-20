@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Application versioning: Raise `ClosedRevisionError` when trying to revise or inactive closed versions.
+
 ## [0.2.0] - 2025-11-19
 
 - Added ambient/global time scopes
