@@ -52,14 +52,14 @@ module ActiveRecord::Temporal
       def versioning_hook(source_table)
         update_function_name = versioning_function_name(source_table, :update)
 
-        row = execute(<<~SQL.squish).first
+        row = exec_query(<<~SQL.squish, "SQL", [update_function_name]).first
           SELECT
             pg_proc.proname as function_name,
             obj_description(pg_proc.oid, 'pg_proc') as comment
           FROM pg_proc
           JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid
           WHERE pg_namespace.nspname NOT IN ('pg_catalog', 'information_schema')
-            AND pg_proc.proname = '#{update_function_name}'
+            AND pg_proc.proname = $1
         SQL
 
         return unless row
