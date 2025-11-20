@@ -100,6 +100,17 @@ RSpec.describe SystemVersioning::SchemaStatements do
       )
     end
 
+    it "defaults to columns: :all" do
+      conn.create_versioning_hook :authors, :authors_history
+
+      expect(conn.versioning_hook(:authors)).to have_attributes(
+        source_table: "authors",
+        history_table: "authors_history",
+        columns: %w[id first_name last_name],
+        primary_key: "id"
+      )
+    end
+
     it "raises an error if columns don't match" do
       conn.create_table :movies do |t|
         t.string :title

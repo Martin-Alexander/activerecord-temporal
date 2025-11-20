@@ -4,13 +4,14 @@ module ActiveRecord::Temporal
       def create_versioning_hook(source_table, history_table, **options)
         options.assert_valid_keys(:columns, :primary_key)
 
-        column_names = if (columns = options.fetch(:columns)) == :all
+        columns = options.fetch(:columns, :all)
+        primary_key = options.fetch(:primary_key, :id)
+
+        column_names = if columns == :all
           columns(source_table).map(&:name)
         else
           Array(columns).map(&:to_s)
         end
-
-        primary_key = options.fetch(:primary_key, :id)
 
         primary_key = if primary_key.is_a?(Array) && primary_key.length == 1
           primary_key.first
