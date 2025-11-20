@@ -1,6 +1,5 @@
 require "active_record"
 require "active_support/test_case"
-require "active_record/connection_adapters/postgresql_adapter"
 require "debug"
 require "niceql"
 
@@ -13,9 +12,12 @@ require "support/have_versioning_hook"
 require "support/model_factory"
 require "support/namespace_factory"
 require "support/record_factory"
-require "support/test_connection_adapter"
 require "support/table_factory"
 require "support/transaction_time"
+
+ActiveSupport.on_load(:active_record) do
+  require "support/test_connection_adapter"
+end
 
 RSpec.configure do |config|
   ActiveRecord::Base.establish_connection(ActiveRecordTemporalTests::DbConfig.get)

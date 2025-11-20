@@ -41,7 +41,7 @@ module ActiveRecord::Temporal
 end
 
 ActiveSupport.on_load(:active_record) do
-  require "active_record/connection_adapters/postgresql_adapter" # TODO: add test
+  require "active_record/connection_adapters/postgresql_adapter"
 
   ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
     .include ActiveRecord::Temporal::SystemVersioning::SchemaStatements
