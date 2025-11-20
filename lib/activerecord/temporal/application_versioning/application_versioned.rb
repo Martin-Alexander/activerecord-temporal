@@ -92,7 +92,7 @@ module ActiveRecord::Temporal
       end
 
       def revise_at(time)
-        raise "not head revision" unless head_revision?
+        raise ClosedRevisionError, "Cannot revise closed version" unless head_revision?
 
         Revision.new(self, time, save: true)
       end
@@ -102,7 +102,7 @@ module ActiveRecord::Temporal
       end
 
       def revision_at(time)
-        raise "not head revision" unless head_revision?
+        raise ClosedRevisionError, "Cannot revise closed version" unless head_revision?
 
         Revision.new(self, time, save: false)
       end
@@ -112,7 +112,7 @@ module ActiveRecord::Temporal
       end
 
       def inactivate_at(time)
-        raise "not head revision" unless head_revision?
+        raise ClosedRevisionError, "Cannot inactivate closed version" unless head_revision?
 
         set_time_dimension_end(time)
         save

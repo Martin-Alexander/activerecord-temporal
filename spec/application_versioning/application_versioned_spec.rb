@@ -78,6 +78,16 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
       expect(user).to have_attributes(validity: t-1...t+2)
       expect(new_user).to have_attributes(validity: t+2...nil)
     end
+
+    it "raises an error if revision is not the head" do
+      user = User.create!(id_value: 1, name: "Bob", validity: t-1...t)
+
+      expect { user.revise_at(t+1).with(name: "Sam") }
+        .to raise_error(
+          ActiveRecord::Temporal::ApplicationVersioning::ClosedRevisionError,
+          /Cannot revise closed version/
+        )
+    end
   end
 
   describe "#revise" do
@@ -134,6 +144,16 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
       expect(user).to have_attributes(validity: t-1...t+2)
       expect(new_user).to have_attributes(validity: t+2...nil)
     end
+
+    it "raises an error if revision is not the head" do
+      user = User.create!(id_value: 1, name: "Bob", validity: t-1...t)
+
+      expect { user.revision_at(t+1).with(name: "Sam") }
+        .to raise_error(
+          ActiveRecord::Temporal::ApplicationVersioning::ClosedRevisionError,
+          /Cannot revise closed version/
+        )
+    end
   end
 
   describe "#revision" do
@@ -174,6 +194,16 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
       end
 
       expect(user).to have_attributes(validity: t-1...t+2)
+    end
+
+    it "raises an error if revision is not the head" do
+      user = User.create!(id_value: 1, name: "Bob", validity: t-1...t)
+
+      expect { user.inactivate_at(t+1).with(name: "Sam") }
+        .to raise_error(
+          ActiveRecord::Temporal::ApplicationVersioning::ClosedRevisionError,
+          /Cannot inactivate closed version/
+        )
     end
   end
 
