@@ -39,6 +39,8 @@ gem "activerecord-temporal"
 
 ### Create a System Versioned Table
 
+Make sure you're using the `:sql` schema dumper.
+
 Create your regular `employees` table. For the `employees_history` table, add the `system_period` column and include it in the table's primary key. `#create_versioning_hook` is what enables system versioning.
 
 ```ruby
