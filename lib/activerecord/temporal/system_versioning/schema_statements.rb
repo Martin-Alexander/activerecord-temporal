@@ -30,7 +30,8 @@ module ActiveRecord::Temporal
           source_table,
           history_table,
           columns: column_names,
-          primary_key: primary_key
+          primary_key: primary_key,
+          gem_version: VERSION
         )
 
         execute schema_creation.accept(hook_definition)
@@ -71,7 +72,8 @@ module ActiveRecord::Temporal
           metadata["source_table"],
           metadata["history_table"],
           columns: metadata["columns"],
-          primary_key: metadata["primary_key"]
+          primary_key: metadata["primary_key"],
+          gem_version: metadata["gem_version"]
         )
       end
 

@@ -30,7 +30,8 @@ module ActiveRecord::Temporal
           verb: :insert,
           source_table: o.source_table,
           history_table: o.history_table,
-          columns: o.columns
+          columns: o.columns,
+          gem_version: o.gem_version
         }
 
         <<~SQL
@@ -64,7 +65,8 @@ module ActiveRecord::Temporal
           source_table: o.source_table,
           history_table: o.history_table,
           columns: o.columns,
-          primary_key: o.primary_key
+          primary_key: o.primary_key,
+          gem_version: o.gem_version
         }
 
         <<~SQL
@@ -101,7 +103,8 @@ module ActiveRecord::Temporal
           verb: :delete,
           source_table: o.source_table,
           history_table: o.history_table,
-          primary_key: o.primary_key
+          primary_key: o.primary_key,
+          gem_version: o.gem_version
         }
 
         <<~SQL

@@ -65,7 +65,8 @@ RSpec.describe SystemVersioning::SchemaStatements do
         source_table: "authors",
         history_table: "authors_history",
         columns: %w[id first_name last_name],
-        primary_key: "id"
+        primary_key: "id",
+        gem_version: VERSION
       )
     end
 

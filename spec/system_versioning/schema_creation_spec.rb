@@ -7,7 +7,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
     object = SystemVersioning::InsertHookDefinition.new(
       :books,
       :books_history,
-      [:id, :title, :pages, :published_at]
+      [:id, :title, :pages, :published_at],
+      "0.99.0"
     )
 
     function_id = Digest::SHA256.hexdigest("books_insert").first(10)
@@ -16,7 +17,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
       verb: :insert,
       source_table: :books,
       history_table: :books_history,
-      columns: %i[id title pages published_at]
+      columns: %i[id title pages published_at],
+      gem_version: "0.99.0"
     )
 
     sql = subject.accept(object)
@@ -43,7 +45,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
       :books,
       :books_history,
       [:id, :title, :pages],
-      :id
+      :id,
+      "0.99.0"
     )
 
     sql = subject.accept(object)
@@ -55,7 +58,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
       source_table: :books,
       history_table: :books_history,
       columns: [:id, :title, :pages],
-      primary_key: :id
+      primary_key: :id,
+      gem_version: "0.99.0"
     )
 
     expect(sql.squish).to eq(<<~SQL.squish)
@@ -89,7 +93,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
       :books,
       :books_history,
       [:id, :title, :pages],
-      [:id, :title]
+      [:id, :title],
+      "0.99.0"
     )
 
     sql = subject.accept(object)
@@ -107,7 +112,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
     object = SystemVersioning::DeleteHookDefinition.new(
       :books,
       :books_history,
-      :id
+      :id,
+      "0.99.0"
     )
 
     function_id = Digest::SHA256.hexdigest("books_delete").first(10)
@@ -116,7 +122,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
       verb: :delete,
       source_table: :books,
       history_table: :books_history,
-      primary_key: :id
+      primary_key: :id,
+      gem_version: "0.99.0"
     )
 
     sql = subject.accept(object)
@@ -146,7 +153,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
     object = SystemVersioning::DeleteHookDefinition.new(
       :books,
       :books_history,
-      [:id, :title]
+      [:id, :title],
+      "0.99.0"
     )
 
     sql = subject.accept(object)
@@ -168,7 +176,8 @@ RSpec.describe SystemVersioning::SchemaCreation do
       :books,
       :books_history,
       columns: columns,
-      primary_key: source_pk
+      primary_key: source_pk,
+      gem_version: "0.99.0"
     )
 
     sql = subject.accept(object)
@@ -176,20 +185,23 @@ RSpec.describe SystemVersioning::SchemaCreation do
     insert_hook_definition = SystemVersioning::InsertHookDefinition.new(
       :books,
       :books_history,
-      columns
+      columns,
+      "0.99.0"
     )
 
     update_hook_definition = SystemVersioning::UpdateHookDefinition.new(
       :books,
       :books_history,
       columns,
-      source_pk
+      source_pk,
+      "0.99.0"
     )
 
     delete_hook_definition = SystemVersioning::DeleteHookDefinition.new(
       :books,
       :books_history,
-      source_pk
+      source_pk,
+      "0.99.0"
     )
 
     expect(sql).to eq(

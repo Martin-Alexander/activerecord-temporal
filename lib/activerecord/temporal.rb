@@ -26,6 +26,7 @@ require_relative "temporal/application_versioning"
 require_relative "temporal/querying"
 require_relative "temporal/scoping"
 require_relative "temporal/system_versioning"
+require_relative "temporal/version"
 
 module ActiveRecord::Temporal
   def system_versioning

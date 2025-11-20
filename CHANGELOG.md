@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 - Application versioning: Raise `ClosedRevisionError` when trying to revise or inactive closed versions.
+- System versioning: Store gem version in versioning hooks
 
 ## [0.2.0] - 2025-11-19
 
