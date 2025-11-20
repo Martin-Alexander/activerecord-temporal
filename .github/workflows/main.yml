@@ -33,47 +33,50 @@ jobs:
         postgres:
           - 18
         appraisal:
+          - 'activerecord_edge'
+          - 'activerecord_8.1.1'
+          - 'activerecord_8.1.0'
+          - 'activerecord_8.0.4'
           - 'activerecord_8.0.3'
           - 'activerecord_8.0.2.1'
           - 'activerecord_8.0.2'
           - 'activerecord_8.0.1'
           - 'activerecord_8.0.0.1'
           - 'activerecord_8.0.0'
-          - 'activerecord_edge'
         include:
           - ruby: '3.3.10'
             postgres: 13
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.2.9'
             postgres: 13
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.4.7'
             postgres: 16
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.3.10'
             postgres: 16
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.2.9'
             postgres: 16
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.4.7'
             postgres: 17
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.3.10'
             postgres: 17
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.2.9'
             postgres: 17
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.4.7'
             postgres: 18
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.3.10'
             postgres: 18
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
           - ruby: '3.2.9'
             postgres: 18
-            appraisal: 'activerecord_8.0.3'
+            appraisal: 'activerecord_8.1.1'
 
     env:
       BUNDLE_GEMFILE: gemfiles/${{ matrix.appraisal }}.gemfile
