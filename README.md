@@ -8,16 +8,17 @@ It provides both system versioning and application versioning. They can be used 
 
 As applications mature, changing business requirements become increasingly complicated by the need to handle historical data. You might need to:
 
-- Update subscription plans, but retain existing subscribers' original payment schedules
-- Allow users to see information as it was before their view permission was revoked
-- Understand why generated financial reports have changed recently
-- Restore erroneously updated data
+- Know the price of a product at the time it was added to a cart
+- Allow users to see content as it was before their subscription ended
+- Track the lifetime of long-lived, slowly change entities like projects or customers 
+- Generate reports based on the data as it was known at some time in the past
 
 Many Rails applications use a patchwork of approaches:
 
 - **Soft deletes** with a `deleted_at` column, but updates that still permanently overwrite data.
-- **Audit gems or JSON columns** that serialize changes. Their data doesn't evolve with schema changes and cannot be easily integrated into Active Record queries, scopes, and associations.
+- **Audit gems or JSON fields** that serialize rows. Their data doesn't evolve with schema changes and can't be easily integrated into Active Record queries, scopes, and associations.
 - **Event systems** that are used to fill gaps in the data model and gradually take on responsibilities that are implementation details with no business relevance.
+- **Ad-hoc snapshot columns** that result in important business entities having their historical data duplicated across many different and incohesive tables.
 
 Temporal databases solve these problems by providing a simple and coherent data model to reach for whenever historical data is needed.
 
