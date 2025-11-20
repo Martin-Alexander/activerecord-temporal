@@ -24,6 +24,5 @@ Gem::Specification.new do |s|
   }
 
   s.add_dependency "activerecord", ">= 8", "< 9.0"
-  s.add_dependency "activesupport", ">= 8", "< 9.0"
   s.add_dependency "pg", ">= 1.0"
 end
