@@ -85,8 +85,9 @@ ActiveSupport.on_load(:active_record) do
     .prepend ActiveRecord::Temporal::Patches::AssociationReflection
 
   # This is a copy of a fix from https://github.com/rails/rails/pull/56088 that
-  # impacts this gem. I has been backported to supported stable versions of
-  # Active Record, but until those patches are released it's included here.
+  # impacts this gem. I has been merged and backported to supported stable
+  # versions of Active Record, but until those patches are released it's included
+  # here.
   ActiveRecord::Associations::JoinDependency
     .prepend ActiveRecord::Temporal::Patches::JoinDependency
 end
