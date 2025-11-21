@@ -29,6 +29,10 @@ This can be a versioning strategy that operates automatically at the database le
 - Active Record >= 8
 - PostgreSQL >= 13
 
+## Stability
+
+⚠️ Current a beta release. Breaking changes will bump the minor version until the 1.x.x release.
+
 ## Quick Start
 
 ```ruby
