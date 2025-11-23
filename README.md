@@ -20,7 +20,7 @@ Many Rails applications use a patchwork of approaches:
 - **Event systems** that are used to fill gaps in the data model and gradually take on responsibilities that are implementation details with no business relevance.
 - **Ad-hoc snapshot columns** that result in important business entities having their historical data duplicated across many different and incohesive tables.
 
-Temporal databases solve these problems by providing a simple and coherent data model to reach for whenever historical data is needed.
+Temporal tables address these problems by providing a simple and coherent data model to reach for whenever historical data is needed.
 
 This can be a versioning strategy that operates automatically at the database level or one where versioning is used up front as the default method for all CRUD operations on a table.
 
@@ -29,6 +29,10 @@ This can be a versioning strategy that operates automatically at the database le
 - Active Record >= 8
 - PostgreSQL >= 13
 
+## Stability
+
+⚠️ Current a beta release. Breaking changes will bump the minor version until the 1.x.x release.
+
 ## Quick Start
 
 ```ruby
@@ -36,8 +40,13 @@ This can be a versioning strategy that operates automatically at the database le
 
 gem "activerecord-temporal"
 ```
+### Versioning Strategies
 
-### Create a System Versioned Table
+This gem supports two versioning strategies:
+1. **System versioning**, where database triggers automatically maintain a separate history table that records transaction time.
+2. **Application versioning**, where versioning is managed by the application using a single table whose time dimension can represent validity or any other temporal business concept.
+
+### Creating a System Versioned Table
 
 Make sure you're using the `:sql` schema dumper.
 
@@ -121,7 +130,7 @@ Employee.history.as_of(Time.parse("2000-01-10"))
  - [System Versioning](#system-versioning)
  - [History Model Namespace](#history-model-namespace)
 
-### Create an Application Versioned Table
+### Creating an Application Versioned Table
 
 Create an `employees` table with a `version` column in the primary key and a `tstzrange` column to be the time dimension.
 
@@ -192,7 +201,7 @@ Employee.as_of(Time.parse("2000-02-15"))
  - [Application Versioning](#application-versioning)
  - [Foreign Key Constraints](#foreign-key-constraints)
 
-### Make Time-travel Queries
+### Making Time-travel Queries
 
 This interface works the same with system versioning and application. But this example assumes at least the `Product` and `Order` models are system versioned:
 
@@ -510,7 +519,7 @@ class Product < ApplicationRecord
 end
 ```
 
-The only strict requirements for a application versioned table are:
+The only strict requirements for an application versioned table are:
 1. It must have a `tstzrange` column (name doesn't matter)
 2. It must have a numeric `version` column with a default value
 
