@@ -10,7 +10,7 @@ As applications mature, changing business requirements become increasingly compl
 
 - Know the price of a product at the time it was added to a cart
 - Allow users to see content as it was before their subscription ended
-- Track the lifetime of long-lived, slowly change entities like projects or customers 
+- Track the lifetime of long-lived, slowly changing entities like projects or customers 
 - Generate reports based on the data as it was known at some time in the past
 
 Many Rails applications use a patchwork of approaches:
@@ -31,7 +31,7 @@ This can be a versioning strategy that operates automatically at the database le
 
 ## Stability
 
-⚠️ Current a beta release. Breaking changes will bump the minor version until the 1.x.x release.
+⚠️ Currently a beta release. Breaking changes will bump the minor version until the 1.x.x release.
 
 ## Quick Start
 
