@@ -45,6 +45,8 @@ module ActiveRecord::Temporal
       self.time_dimensions = options[:dimensions] if options[:dimensions]
     end
   end
+
+  HistoryModelNamespace = SystemVersioning::HistoryModelNamespace
 end
 
 ActiveSupport.on_load(:active_record) do

@@ -32,4 +32,11 @@ RSpec.describe ActiveRecord::Temporal do
       expect(ApplicationRecord.time_dimensions).to eq([:validity])
     end
   end
+
+  describe "::HistoryModelNamespace" do
+    it "returns ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace" do
+      expect(described_class::HistoryModelNamespace)
+        .to eq(described_class::SystemVersioning::HistoryModelNamespace)
+    end
+  end
 end
