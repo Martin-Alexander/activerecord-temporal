@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fixed issue where including `ActiveRecord::Temporal` would not extend the base module properly
+
 ## [0.3.0] - 2025-11-20
 
 - Application versioning: Raise `ClosedRevisionError` when trying to revise or inactive closed versions.

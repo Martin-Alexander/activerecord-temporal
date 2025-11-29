@@ -1,6 +1,6 @@
 require "spec_helper"
 
-RSpec.describe SystemVersioning::SchemaStatements do
+RSpec.describe ActiveRecord::Temporal::SystemVersioning::SchemaStatements do
   before do
     conn.create_table :authors do |t|
       t.string :first_name
@@ -66,7 +66,7 @@ RSpec.describe SystemVersioning::SchemaStatements do
         history_table: "authors_history",
         columns: %w[id first_name last_name],
         primary_key: "id",
-        gem_version: VERSION
+        gem_version: ActiveRecord::Temporal::VERSION
       )
     end
 

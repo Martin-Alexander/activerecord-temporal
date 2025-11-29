@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe Querying, "default scope" do
+RSpec.describe ActiveRecord::Temporal::Querying, "default scope" do
   before do
     table :authors, primary_key: [:id, :version] do |t|
       t.bigint :id, null: false
@@ -47,13 +47,13 @@ RSpec.describe Querying, "default scope" do
   end
 
   it "adds default scope to models" do
-    authors = Querying::Scoping.at({period: t+2}) do
+    authors = described_class::Scoping.at({period: t+2}) do
       Author.all
     end
 
     expect(authors).to contain_exactly(author_bob_v1, author_sam_v1)
 
-    authors = Querying::Scoping.at(t+2) do
+    authors = described_class::Scoping.at(t+2) do
       Author.all
     end
 
@@ -63,20 +63,20 @@ RSpec.describe Querying, "default scope" do
   end
 
   it "is over written by as_of" do
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       expect(Author.all).to contain_exactly(author_bob_v1, author_sam_v1)
       expect(Author.as_of(t+3)).to contain_exactly(author_bob_v2, author_sam_v1)
     end
   end
 
   it "is over written by at_time" do
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       expect(Author.at_time(t+3)).to contain_exactly(author_bob_v2, author_sam_v1)
     end
   end
 
   it "does not set time scope on relation or records" do
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       authors = Author.all
 
       expect(authors.time_tag_values).to eq({})
@@ -85,7 +85,7 @@ RSpec.describe Querying, "default scope" do
   end
 
   it "does not interfere with setting time scops" do
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       authors = Author.as_of(t+3)
 
       expect(authors.time_tag_values).to eq({period: t+3})
@@ -96,7 +96,7 @@ RSpec.describe Querying, "default scope" do
   it "applies a scope the persists outside the block" do
     authors = nil
 
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       authors = Author.all
     end
 
@@ -106,7 +106,7 @@ RSpec.describe Querying, "default scope" do
   it "does not overwrite time scopes from outside the block" do
     authors = Author.as_of(t+3)
 
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       expect(authors).to contain_exactly(author_bob_v2, author_sam_v1)
       expect(authors.time_tag_values).to eq({period: t+3})
       expect(authors.first.time_tag).to eq(t+3)
@@ -114,7 +114,7 @@ RSpec.describe Querying, "default scope" do
   end
 
   it "applies its scope to associations" do
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       expect(Author.first.books).to contain_exactly(foo_v1)
     end
   end
@@ -122,10 +122,10 @@ RSpec.describe Querying, "default scope" do
   it "is nestable" do
     expect(Author.count).to eq(6)
 
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       expect(Author.all).to contain_exactly(author_bob_v1, author_sam_v1)
 
-      Querying::Scoping.at({period: t+3}) do
+      described_class::Scoping.at({period: t+3}) do
         expect(Author.all).to contain_exactly(author_bob_v2, author_sam_v1)
       end
 
@@ -143,10 +143,10 @@ RSpec.describe Querying, "default scope" do
 
     author_bob_v1.reload.update!(system_period: t+3...)
 
-    Querying::Scoping.at({period: t+2}) do
+    described_class::Scoping.at({period: t+2}) do
       expect(Author.all).to contain_exactly(author_bob_v1, author_sam_v1)
 
-      Querying::Scoping.at({system_period: t+2}) do
+      described_class::Scoping.at({system_period: t+2}) do
         expect(Author.all).to contain_exactly(author_sam_v1)
       end
 

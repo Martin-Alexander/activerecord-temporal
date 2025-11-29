@@ -13,7 +13,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning do
         application_versioned
       end
 
-      expect(Cake).to be_include(ApplicationVersioning::ApplicationVersioned)
+      expect(Cake).to be_include(described_class::ApplicationVersioned)
     end
   end
 end

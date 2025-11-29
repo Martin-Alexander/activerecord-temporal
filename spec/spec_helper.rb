@@ -23,7 +23,6 @@ RSpec.configure do |config|
   ActiveRecord::Base.establish_connection(ActiveRecordTemporalTests::DbConfig.get)
   ActiveRecord::Base.logger = Logger.new($stdout) if ENV.fetch("AR_LOG") { false }
 
-  include ActiveRecord::Temporal
   include ActiveRecordTemporalTests
 
   config.include ActiveSupport::Testing::TimeHelpers

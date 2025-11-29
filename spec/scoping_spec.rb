@@ -6,6 +6,6 @@ RSpec.describe ActiveRecord::Temporal::Scoping do
       include ActiveRecord::Temporal::Scoping
     end
 
-    expect(klass.new.temporal_scoping).to eq(Querying::Scoping)
+    expect(klass.new.temporal_scoping).to eq(ActiveRecord::Temporal::Querying::Scoping)
   end
 end

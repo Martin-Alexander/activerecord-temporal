@@ -10,7 +10,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning do
       system_versioning
     end
 
-    expect(ApplicationRecord).to be_include(SystemVersioning::HistoryModels)
+    expect(ApplicationRecord).to be_include(described_class::HistoryModels)
   end
 
   describe "::system_versioned" do
@@ -25,7 +25,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning do
         system_versioned
       end
 
-      expect(Cake).to be_include(SystemVersioning::SystemVersioned)
+      expect(Cake).to be_include(described_class::SystemVersioned)
     end
   end
 end

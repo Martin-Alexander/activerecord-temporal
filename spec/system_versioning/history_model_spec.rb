@@ -10,15 +10,15 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModel do
 
   it "has the table name of its parent's history table name" do
     model "Cookie" do
-      include SystemVersioning::SystemVersioned
+      include ActiveRecord::Temporal::SystemVersioning::SystemVersioned
     end
     model "Pie" do
-      include SystemVersioning::SystemVersioned
+      include ActiveRecord::Temporal::SystemVersioning::SystemVersioned
 
       self.table_name = "big_pies"
     end
     model "Cake" do
-      include SystemVersioning::SystemVersioned
+      include ActiveRecord::Temporal::SystemVersioning::SystemVersioned
 
       def self.history_table_name
         "history_of_cakes"
@@ -26,13 +26,13 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModel do
     end
 
     model "CookieHistory", Cookie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
     model "PieHistory", Pie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
     model "CakeHistory", Cake do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
 
     expect(CookieHistory.table_name).to eq("cookies_history")
@@ -47,10 +47,10 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModel do
     end
 
     model "CookieHistory", Cookie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
     model "PieHistory", Pie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
 
     expect(CookieHistory.table_name).to eq("cookies")
@@ -65,21 +65,21 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModel do
     end
 
     model "Cookie" do
-      include SystemVersioning::SystemVersioned
+      include ActiveRecord::Temporal::SystemVersioning::SystemVersioned
     end
     model "Pie"
     model "Cake" do
-      include SystemVersioning::SystemVersioned
+      include ActiveRecord::Temporal::SystemVersioning::SystemVersioned
     end
 
     model "CookieHistory", Cookie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
     model "PieHistory", Pie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
     model "CakeHistory", Cake do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
 
     expect(CookieHistory.primary_key).to eq(%w[id system_period])
@@ -89,26 +89,26 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModel do
 
   it "has the correct time dimensions" do
     model "Cookie" do
-      include Querying
-      include SystemVersioning::SystemVersioned
+      include ActiveRecord::Temporal::Querying
+      include ActiveRecord::Temporal::SystemVersioning::SystemVersioned
 
       self.time_dimensions = :validity
     end
     model "Pie" do
-      include Querying
+      include ActiveRecord::Temporal::Querying
 
       self.time_dimensions = :validity
     end
     model "Cake"
 
     model "CookieHistory", Cookie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
     model "PieHistory", Pie do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
     model "CakeHistory", Cake do
-      include SystemVersioning::HistoryModel
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
     end
 
     expect(CookieHistory.time_dimensions).to eq([:validity, :system_period])

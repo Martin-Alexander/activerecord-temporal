@@ -29,15 +29,21 @@ require_relative "temporal/system_versioning"
 require_relative "temporal/version"
 
 module ActiveRecord::Temporal
-  def system_versioning
-    include SystemVersioning
+  def self.included(base)
+    base.extend ClassMethods
   end
 
-  def application_versioning(**options)
-    include Querying
-    include ApplicationVersioning
+  module ClassMethods
+    def system_versioning
+      include SystemVersioning
+    end
 
-    self.time_dimensions = options[:dimensions] if options[:dimensions]
+    def application_versioning(**options)
+      include Querying
+      include ApplicationVersioning
+
+      self.time_dimensions = options[:dimensions] if options[:dimensions]
+    end
   end
 end
 

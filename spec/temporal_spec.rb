@@ -5,10 +5,10 @@ RSpec.describe ActiveRecord::Temporal do
     it "includes SystemVersioning" do
       model "ApplicationRecord"
 
-      ApplicationRecord.extend ActiveRecord::Temporal
+      ApplicationRecord.include described_class
       ApplicationRecord.system_versioning
 
-      expect(ApplicationRecord).to be_include(SystemVersioning)
+      expect(ApplicationRecord).to be_include(described_class::SystemVersioning)
     end
   end
 
@@ -16,19 +16,19 @@ RSpec.describe ActiveRecord::Temporal do
     it "includes ApplicationVersioning" do
       model "ApplicationRecord"
 
-      ApplicationRecord.extend ActiveRecord::Temporal
+      ApplicationRecord.include described_class
       ApplicationRecord.application_versioning
 
-      expect(ApplicationRecord).to be_include(ApplicationVersioning)
+      expect(ApplicationRecord).to be_include(described_class::ApplicationVersioning)
     end
 
     it "sets the time dimension" do
       model "ApplicationRecord"
 
-      ApplicationRecord.extend ActiveRecord::Temporal
+      ApplicationRecord.include described_class
       ApplicationRecord.application_versioning dimensions: :validity
 
-      expect(ApplicationRecord).to be_include(ApplicationVersioning)
+      expect(ApplicationRecord).to be_include(described_class::ApplicationVersioning)
       expect(ApplicationRecord.time_dimensions).to eq([:validity])
     end
   end

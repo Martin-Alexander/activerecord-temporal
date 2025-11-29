@@ -1,10 +1,10 @@
 require "spec_helper"
 
-RSpec.describe SystemVersioning::SchemaCreation do
+RSpec.describe ActiveRecord::Temporal::SystemVersioning::SchemaCreation do
   subject { described_class.new(ActiveRecord::Base.connection) }
 
   it "InsertHookDefinition returns the correct SQL" do
-    object = SystemVersioning::InsertHookDefinition.new(
+    object = ActiveRecord::Temporal::SystemVersioning::InsertHookDefinition.new(
       :books,
       :books_history,
       [:id, :title, :pages, :published_at],
@@ -41,7 +41,7 @@ RSpec.describe SystemVersioning::SchemaCreation do
   end
 
   it "UpdateHookDefinition returns the correct SQL" do
-    object = SystemVersioning::UpdateHookDefinition.new(
+    object = ActiveRecord::Temporal::SystemVersioning::UpdateHookDefinition.new(
       :books,
       :books_history,
       [:id, :title, :pages],
@@ -89,7 +89,7 @@ RSpec.describe SystemVersioning::SchemaCreation do
   end
 
   it "UpdateHookDefinition returns correct SQL given composite primary key" do
-    object = SystemVersioning::UpdateHookDefinition.new(
+    object = ActiveRecord::Temporal::SystemVersioning::UpdateHookDefinition.new(
       :books,
       :books_history,
       [:id, :title, :pages],
@@ -109,7 +109,7 @@ RSpec.describe SystemVersioning::SchemaCreation do
   end
 
   it "DeleteHookDefinition returns the correct SQL" do
-    object = SystemVersioning::DeleteHookDefinition.new(
+    object = ActiveRecord::Temporal::SystemVersioning::DeleteHookDefinition.new(
       :books,
       :books_history,
       :id,
@@ -150,7 +150,7 @@ RSpec.describe SystemVersioning::SchemaCreation do
   end
 
   it "DeleteHookDefinition returns the correct SQL given composite primary key" do
-    object = SystemVersioning::DeleteHookDefinition.new(
+    object = ActiveRecord::Temporal::SystemVersioning::DeleteHookDefinition.new(
       :books,
       :books_history,
       [:id, :title],
@@ -182,14 +182,14 @@ RSpec.describe SystemVersioning::SchemaCreation do
 
     sql = subject.accept(object)
 
-    insert_hook_definition = SystemVersioning::InsertHookDefinition.new(
+    insert_hook_definition = ActiveRecord::Temporal::SystemVersioning::InsertHookDefinition.new(
       :books,
       :books_history,
       columns,
       "0.99.0"
     )
 
-    update_hook_definition = SystemVersioning::UpdateHookDefinition.new(
+    update_hook_definition = ActiveRecord::Temporal::SystemVersioning::UpdateHookDefinition.new(
       :books,
       :books_history,
       columns,
@@ -197,7 +197,7 @@ RSpec.describe SystemVersioning::SchemaCreation do
       "0.99.0"
     )
 
-    delete_hook_definition = SystemVersioning::DeleteHookDefinition.new(
+    delete_hook_definition = ActiveRecord::Temporal::SystemVersioning::DeleteHookDefinition.new(
       :books,
       :books_history,
       source_pk,

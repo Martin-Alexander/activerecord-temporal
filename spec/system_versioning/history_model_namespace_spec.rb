@@ -5,7 +5,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
     conn.enable_extension(:btree_gist)
 
     stub_const("History", Module.new do
-      include SystemVersioning::HistoryModelNamespace
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace
     end)
   end
 
@@ -28,7 +28,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
 
   it "finds nested history models" do
     stub_const("History", Module.new do
-      include SystemVersioning::HistoryModelNamespace
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace
 
       namespace "MyApp" do
         namespace "SystemB" do
@@ -43,15 +43,15 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModelNamespace d
 
     expect { History::MyApp::Post }.not_to raise_error
     expect(History::MyApp::Post).to be < MyApp::Post
-    expect(History::MyApp::Post).to be < SystemVersioning::HistoryModel
+    expect(History::MyApp::Post).to be < ActiveRecord::Temporal::SystemVersioning::HistoryModel
 
     expect { History::MyApp::SystemB::Account }.not_to raise_error
     expect(History::MyApp::SystemB::Account).to be < MyApp::SystemB::Account
-    expect(History::MyApp::SystemB::Account).to be < SystemVersioning::HistoryModel
+    expect(History::MyApp::SystemB::Account).to be < ActiveRecord::Temporal::SystemVersioning::HistoryModel
 
     expect { History::MyApp::SystemB::Deprecated::User }.not_to raise_error
     expect(History::MyApp::SystemB::Deprecated::User).to be < MyApp::SystemB::Deprecated::User
-    expect(History::MyApp::SystemB::Deprecated::User).to be < SystemVersioning::HistoryModel
+    expect(History::MyApp::SystemB::Deprecated::User).to be < ActiveRecord::Temporal::SystemVersioning::HistoryModel
   end
 
   it "doesn't interfere with custom history classes" do

@@ -1,8 +1,6 @@
 require "spec_helper"
 
 RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
-  include ActiveRecord::Temporal
-
   after do
     drop_all_tables
     drop_all_versioning_hooks
@@ -39,14 +37,14 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
       model "ApplicationRecord" do
         self.abstract_class = true
 
-        include SystemVersioning::HistoryModels
+        include ActiveRecord::Temporal::SystemVersioning::HistoryModels
       end
     end
 
     it "raises error on abstract classes" do
       expect { ApplicationRecord.history_model }
         .to raise_error(
-          SystemVersioning::HistoryModels::Error,
+          described_class::Error,
           "abstract classes cannot have a history model"
         )
     end
@@ -64,7 +62,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
         end
       end
       model "MyCakeHistory", Cake do
-        include SystemVersioning::HistoryModel
+        include ActiveRecord::Temporal::SystemVersioning::HistoryModel
       end
 
       expect(Cake.history_model).to eq(MyCakeHistory)
@@ -80,7 +78,7 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModels do
     it "raises error on abstract classes" do
       expect { ApplicationRecord.history }
         .to raise_error(
-          SystemVersioning::HistoryModels::Error,
+          described_class::Error,
           "abstract classes cannot have a history model"
         )
     end

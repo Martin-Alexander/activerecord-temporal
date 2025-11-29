@@ -20,7 +20,7 @@ RSpec.describe "multiple columns spec" do
     end
 
     model "Employee" do
-      include Querying
+      include ActiveRecord::Temporal::Querying
 
       self.time_dimensions = :validity, :sys_period
 
@@ -28,7 +28,7 @@ RSpec.describe "multiple columns spec" do
     end
 
     model "Org" do
-      include Querying
+      include ActiveRecord::Temporal::Querying
 
       self.time_dimensions = :validity, :sys_period
 

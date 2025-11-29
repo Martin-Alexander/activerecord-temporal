@@ -71,7 +71,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
     it "it creates a revision at the given time in a time scope" do
       new_user = nil
 
-      Querying::Scoping.at({validity: t+1}) do
+      ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
         new_user = user.revise_at(t+2).with(name: "Sam")
       end
 
@@ -111,7 +111,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
     it "it creates a revision at the global time if set" do
       new_user = nil
 
-      Querying::Scoping.at({validity: t+1}) do
+      ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
         new_user = user.revise.with(name: "Sam")
       end
 
@@ -137,7 +137,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
     it "it creates a revision at the given time in a time scope" do
       new_user = nil
 
-      Querying::Scoping.at({validity: t+1}) do
+      ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
         new_user = user.revision_at(t+2).with(name: "Sam")
       end
 
@@ -189,7 +189,7 @@ RSpec.describe ActiveRecord::Temporal::ApplicationVersioning::ApplicationVersion
     end
 
     it "it inactivates a record at the given time in a time scope" do
-      Querying::Scoping.at({validity: t+1}) do
+      ActiveRecord::Temporal::Querying::Scoping.at({validity: t+1}) do
         user.inactivate_at(t+2)
       end
 
