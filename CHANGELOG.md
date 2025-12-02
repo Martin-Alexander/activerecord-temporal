@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.4.0] - 2025-12-02
+
 - Nest `HistoryModelNamespace` directly in `ActiveRecord::Temporal` as per the README
 - Fixed issue where including `ActiveRecord::Temporal` would not extend the base module properly
 
