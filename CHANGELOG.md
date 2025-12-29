@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix issue where scoped source associations would break history model assocaition temporalization
+
 ## [0.4.0] - 2025-12-02
 
 - Nest `HistoryModelNamespace` directly in `ActiveRecord::Temporal` as per the README

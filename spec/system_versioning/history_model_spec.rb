@@ -116,6 +116,24 @@ RSpec.describe ActiveRecord::Temporal::SystemVersioning::HistoryModel do
     expect(CakeHistory.time_dimensions).to eq([:system_period])
   end
 
+  it "temporalizes associations" do
+    model "Cookie" do
+      include ActiveRecord::Temporal::Querying
+      include ActiveRecord::Temporal::SystemVersioning::SystemVersioned
+
+      has_many :pies
+      has_many :cakes, -> { none }
+      has_many :pastries, temporal: true
+      has_many :candies, temporal: false
+      has_many :puddings, -> { none }, temporal: false
+    end
+    model "CookieHistory", Cookie do
+      include ActiveRecord::Temporal::SystemVersioning::HistoryModel
+    end
+
+    expect(CookieHistory.reflect_on_all_associations.map(&:scope)).to all(be_temporal_scope)
+  end
+
   shared_examples "versions records" do
     it "versions records" do
       t1 = transaction_time { Author.create!(name: "Will") }

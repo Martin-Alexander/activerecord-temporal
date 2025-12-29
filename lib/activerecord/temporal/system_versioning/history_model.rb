@@ -32,8 +32,6 @@ module ActiveRecord::Temporal
         self.time_dimensions = time_dimensions + [:system_period]
 
         reflect_on_all_associations.each do |reflection|
-          next if reflection.scope&.temporal_scope?
-
           send(
             reflection.macro,
             reflection.name,
